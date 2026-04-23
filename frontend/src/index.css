@@ -1,0 +1,294 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Hybrid MediaWorks — Theme Tokens ───────────────────────────────────────
+   All theme-dependent colours are CSS custom properties so a single
+   `data-theme="light"` attribute on <html> flips the entire UI.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+:root,
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-body:        #0c1210;
+  --bg-sidebar:     linear-gradient(180deg, #080f08 0%, #0d180d 50%, #080f08 100%);
+  --bg-main:        linear-gradient(180deg, #0e1812 0%, #0c1210 100%);
+  --bg-surface:     rgba(255,255,255,0.04);
+  --bg-surface-alt: rgba(255,255,255,0.02);
+  --bg-surface-hover: rgba(255,255,255,0.08);
+  --bg-input:       rgba(255,255,255,0.05);
+  --bg-modal:       rgba(16,24,16,0.95);
+  --bg-glass:       rgba(10,17,10,0.75);
+  --bg-sticky:      rgba(12,18,16,0.95);
+  --bg-hero:        linear-gradient(135deg, #080f08 0%, #111a11 60%, #0d180d 100%);
+  --bg-login:       linear-gradient(135deg, #080f08 0%, #0d1a0d 40%, #111a0a 100%);
+
+  /* Text */
+  --text-primary:   #ffffff;
+  --text-body:      #e5e7eb;
+  --text-secondary: #d1d5db;
+  --text-muted:     #9ca3af;
+  --text-faint:     #6b7280;
+  --text-input:     #f3f4f6;
+
+  /* Borders */
+  --border-default: rgba(255,255,255,0.1);
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-muted:   rgba(255,255,255,0.08);
+  --border-brand:   rgba(125,194,66,0.08);
+  --border-brand-md: rgba(125,194,66,0.15);
+  --border-brand-lg: rgba(125,194,66,0.25);
+
+  /* Misc */
+  --overlay-bg:     rgba(0,0,0,0.7);
+  --hero-border:    rgba(125,194,66,0.1);
+  --shadow-card:    none;
+  --sidebar-active: linear-gradient(135deg, #7DC24220 0%, #4CAF5030 100%);
+  --sidebar-hover:  rgba(255,255,255,0.05);
+  --code-bg:        rgba(255,255,255,0.03);
+  --info-banner-color: #86efac;
+}
+
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-body:        #f5f7f5;
+  --bg-sidebar:     linear-gradient(180deg, #ffffff 0%, #f9faf9 50%, #ffffff 100%);
+  --bg-main:        linear-gradient(180deg, #f7f9f7 0%, #f0f2f0 100%);
+  --bg-surface:     #ffffff;
+  --bg-surface-alt: #fafbfa;
+  --bg-surface-hover: #f3f4f3;
+  --bg-input:       #ffffff;
+  --bg-modal:       rgba(255,255,255,0.98);
+  --bg-glass:       rgba(255,255,255,0.88);
+  --bg-sticky:      rgba(245,247,245,0.96);
+  --bg-hero:        linear-gradient(135deg, #f0f7ec 0%, #f5f8f3 60%, #eef5e8 100%);
+  --bg-login:       linear-gradient(135deg, #e8f5e0 0%, #f0f7ec 40%, #f5f8f3 100%);
+
+  /* Text */
+  --text-primary:   #111827;
+  --text-body:      #374151;
+  --text-secondary: #4b5563;
+  --text-muted:     #6b7280;
+  --text-faint:     #9ca3af;
+  --text-input:     #1f2937;
+
+  /* Borders */
+  --border-default: rgba(0,0,0,0.1);
+  --border-subtle:  rgba(0,0,0,0.05);
+  --border-muted:   rgba(0,0,0,0.08);
+  --border-brand:   rgba(125,194,66,0.15);
+  --border-brand-md: rgba(125,194,66,0.25);
+  --border-brand-lg: rgba(125,194,66,0.35);
+
+  /* Misc */
+  --overlay-bg:     rgba(0,0,0,0.4);
+  --hero-border:    rgba(125,194,66,0.15);
+  --shadow-card:    0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --sidebar-active: linear-gradient(135deg, rgba(125,194,66,0.12) 0%, rgba(76,175,80,0.18) 100%);
+  --sidebar-hover:  rgba(0,0,0,0.04);
+  --code-bg:        rgba(0,0,0,0.04);
+  --info-banner-color: #14532d;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    @apply antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg-body);
+    color: var(--text-body);
+  }
+}
+
+/* ── Light-mode Tailwind text-colour remaps ──────────────────────────────── */
+/* These only fire inside [data-theme="light"] and intentionally skip buttons
+   and elements on coloured backgrounds so white-on-green stays white.       */
+[data-theme="light"] :where(p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code, a:not(.btn-primary)):where(.text-white) {
+  color: var(--text-primary);
+}
+[data-theme="light"] :where(p, h1, h2, h3, h4, h5, span, div, td, th, li):where(.text-gray-100) {
+  color: #1f2937;
+}
+[data-theme="light"] :where(p, h1, h2, h3, h4, h5, span, div, td, th, li):where(.text-gray-200) {
+  color: #374151;
+}
+[data-theme="light"] :where(p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code):where(.text-gray-300) {
+  color: #4b5563;
+}
+[data-theme="light"] :where(p, h1, h2, h3, h4, h5, span, div, td, th, li, label):where(.text-gray-400) {
+  color: #6b7280;
+}
+[data-theme="light"] :where(p, h1, h2, h3, h4, h5, span, div, td, th, li):where(.text-gray-500) {
+  color: #9ca3af;
+}
+/* Hover states */
+[data-theme="light"] :where(.hover\:text-white):hover {
+  color: var(--text-primary) !important;
+}
+[data-theme="light"] :where(.hover\:text-gray-300):hover {
+  color: #4b5563 !important;
+}
+/* bg-white/X glass surfaces need remapping */
+[data-theme="light"] :where(.bg-white\/5, .bg-white\/10) {
+  background-color: rgba(0,0,0,0.04);
+}
+[data-theme="light"] :where(.hover\:bg-white\/5):hover {
+  background-color: rgba(0,0,0,0.05) !important;
+}
+[data-theme="light"] :where(.hover\:bg-white\/10):hover {
+  background-color: rgba(0,0,0,0.06) !important;
+}
+[data-theme="light"] :where(.border-white\/5, .border-white\/10, .border-white\/20) {
+  border-color: var(--border-default);
+}
+[data-theme="light"] :where(.hover\:border-white\/20):hover {
+  border-color: var(--border-brand-md) !important;
+}
+
+/* ── "Light-shade" colour remaps — 300/200-level dark-mode-only colours ─────
+   Covers buttons (excl. .btn-primary / .btn-danger), spans, divs, and all
+   common text elements so status badges, provider cards, labels, etc. are
+   readable in light mode.                                                    */
+[data-theme="light"] :where(
+  p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code,
+  button:not(.btn-primary):not(.btn-danger)
+):where(.text-blue-300)    { color: #1d4ed8; }
+
+[data-theme="light"] :where(
+  p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code,
+  button:not(.btn-primary):not(.btn-danger)
+):where(.text-green-300, .text-green-200, .text-green-400) { color: #15803d; }
+
+[data-theme="light"] :where(
+  p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code,
+  button:not(.btn-primary):not(.btn-danger)
+):where(.text-purple-300)  { color: #7e22ce; }
+
+[data-theme="light"] :where(
+  p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code,
+  button:not(.btn-primary):not(.btn-danger)
+):where(.text-sky-300)     { color: #0369a1; }
+
+[data-theme="light"] :where(
+  p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code,
+  button:not(.btn-primary):not(.btn-danger)
+):where(.text-amber-300, .text-amber-200) { color: #b45309; }
+
+[data-theme="light"] :where(
+  p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code,
+  button:not(.btn-primary):not(.btn-danger)
+):where(.text-slate-300)   { color: #475569; }
+
+[data-theme="light"] :where(
+  p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code,
+  button:not(.btn-primary):not(.btn-danger)
+):where(.text-red-300)     { color: #b91c1c; }
+
+[data-theme="light"] :where(
+  p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code,
+  button:not(.btn-primary):not(.btn-danger)
+):where(.text-violet-300)  { color: #7c3aed; }
+
+[data-theme="light"] :where(
+  p, h1, h2, h3, h4, h5, span, div, td, th, li, label, code,
+  button:not(.btn-primary):not(.btn-danger)
+):where(.text-emerald-300) { color: #065f46; }
+
+/* Buttons — increase contrast for mid-gray text */
+[data-theme="light"] button:not(.btn-primary):not(.btn-danger).text-gray-400 { color: #4b5563; }
+[data-theme="light"] button:not(.btn-primary):not(.btn-danger).text-gray-500 { color: #374151; }
+
+/* Button hover text in light mode */
+[data-theme="light"] button:not(.btn-primary):not(.btn-danger).hover\:text-gray-200:hover,
+[data-theme="light"] button:not(.btn-primary):not(.btn-danger).hover\:text-gray-100:hover { color: #111827 !important; }
+
+/* Date input — use light colour-scheme in light mode */
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="datetime-local"] { color-scheme: light; }
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn text-white active:scale-[0.98];
+    background: linear-gradient(135deg, #7DC242 0%, #4CAF50 100%);
+    box-shadow: 0 4px 14px rgba(125, 194, 66, 0.35);
+    color: #ffffff !important;          /* always white on green */
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #6ab233 0%, #43a047 100%);
+    box-shadow: 0 6px 20px rgba(125, 194, 66, 0.45);
+  }
+  .btn-secondary {
+    @apply btn border;
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    border-color: var(--border-default);
+  }
+  .btn-secondary:hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--border-brand-md);
+    color: var(--text-primary);
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    color: #ffffff !important;
+  }
+  /* Glass card */
+  .card {
+    @apply rounded-2xl p-6;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-brand);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card);
+  }
+  .card:hover {
+    border-color: var(--border-brand-md);
+  }
+  /* Inputs */
+  .input {
+    @apply w-full px-3 py-2 rounded-xl text-sm focus:outline-none transition-all;
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    color: var(--text-input);
+  }
+  .input::placeholder { color: var(--text-faint); }
+  .input:focus {
+    border-color: #7DC242;
+    box-shadow: 0 0 0 3px rgba(125, 194, 66, 0.2);
+  }
+  .select {
+    @apply w-full px-3 py-2 rounded-xl text-sm focus:outline-none transition-all;
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    color: var(--text-input);
+  }
+  .select:focus {
+    border-color: #7DC242;
+    box-shadow: 0 0 0 3px rgba(125, 194, 66, 0.2);
+  }
+  .badge {
+    @apply inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold leading-none;
+  }
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-wide mb-1;
+    color: var(--text-muted);
+  }
+  /* Glass panel (login page) */
+  .glass-dark {
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-brand-md);
+  }
+  /* Page hero banner */
+  .page-hero {
+    @apply -mx-8 -mt-8 px-8 pt-8 pb-6 mb-6;
+    background: var(--bg-hero);
+    border-bottom: 1px solid var(--hero-border);
+  }
+}

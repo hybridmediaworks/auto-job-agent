@@ -1,0 +1,52 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+venv/
+.env
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+frontend/node_modules
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Database ──────────────────────────────────────────────────────────────────
+database/*.db
+database/*.db-shm
+database/*.db-wal
+
+# ── Client data (sensitive — never commit real files) ─────────────────────────
+client_data/*
+!client_data/.gitkeep
+!client_data/profile.example.json
+!client_data/resume_data.example.json
+
+# ── Generated PDFs ────────────────────────────────────────────────────────────
+*.pdf
+client_data/generated/
+
+# ── Playwright / Camoufox browser cache ───────────────────────────────────────
+.playwright/
+ms-playwright/
+
+# ── OS artifacts ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Local session files ───────────────────────────────────────────────────────
+PROGRESS.md
+CLAUDE.md
+SESSION_NOTES.md
+.claude/
