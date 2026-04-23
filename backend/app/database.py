@@ -31,9 +31,15 @@ def _resolve_database_url(url: str) -> str:
 # Create SQLAlchemy engine
 engine = create_engine(
     _resolve_database_url(settings.DATABASE_URL),
-    connect_args={"check_same_thread": False},  # Needed for SQLite
+    connect_args={"check_same_thread": False, "timeout": 30},  # Needed for SQLite
     echo=settings.DEBUG  # Log SQL queries in debug mode
 )
+
+# Enable WAL mode for better concurrent read/write performance on live
+with engine.connect() as conn:
+    conn.execute(text("PRAGMA journal_mode=WAL"))
+    conn.execute(text("PRAGMA synchronous=NORMAL"))
+    conn.commit()
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -111,25 +117,10 @@ def init_db() -> None:
         except Exception:
             pass
 
-    # Grant full permissions to all pre-existing users — runs ONCE only.
-    # Guarded by a flag in app_settings so that admins revoking permissions
-    # via the UI don't get their changes overwritten on the next server restart.
+    # Always ensure the admin user has is_admin=True
     with engine.connect() as conn:
         try:
-            already_done = conn.execute(
-                text("SELECT value FROM app_settings WHERE key='permissions_migration_done'")
-            ).fetchone()
-            if not already_done:
-                conn.execute(text(
-                    "UPDATE users SET can_fetch_jobs=1, can_run_saved_search=1, can_create_resume=1 "
-                    "WHERE email_verified=1 AND can_fetch_jobs=0 AND can_run_saved_search=0 AND can_create_resume=0"
-                ))
-                conn.execute(text(
-                    "INSERT INTO app_settings (key, value, description) VALUES "
-                    "('permissions_migration_done', '1', 'One-time flag: existing users granted full permissions')"
-                ))
-            # Always ensure the admin user has is_admin=True
-            conn.execute(text("UPDATE users SET is_admin=1 WHERE username='administrator'"))
+            conn.execute(text("UPDATE users SET is_admin=1 WHERE username='admin'"))
             conn.commit()
         except Exception:
             pass
@@ -138,7 +129,9 @@ def init_db() -> None:
     with engine.connect() as conn:
         for table in ("jobs", "profiles", "saved_searches"):
             try:
-                conn.execute(text(f"UPDATE {table} SET user_id = 1 WHERE user_id IS NULL"))
+                # Resolve admin id dynamically if id=1 is taken by someone else
+                admin_id = conn.execute(text("SELECT id FROM users WHERE username='admin'")).scalar() or 1
+                conn.execute(text(f"UPDATE {table} SET user_id = :uid WHERE user_id IS NULL"), {"uid": admin_id})
                 conn.commit()
             except Exception:
                 pass
@@ -150,9 +143,9 @@ def init_db() -> None:
             from app.utils.auth import get_password_hash
             db.add_all([
                 UserModel(
-                    username="administrator",
+                    username="admin",
                     email="admin@auto-job-agent.com",
-                    password_hash=get_password_hash("systemadmin123!"),
+                    password_hash=get_password_hash("admin123"),
                     is_active=True,
                     email_verified=True,
                     is_admin=True,
@@ -160,24 +153,7 @@ def init_db() -> None:
                     can_run_saved_search=True,
                     can_create_resume=True,
                 ),
-                UserModel(
-                    username="Mirza Waleed",
-                    email="mirzawaleed@auto-job-agent.com",
-                    password_hash=get_password_hash("Mirzawaleed123"),
-                    is_active=True,
-                    email_verified=True,
-                    is_admin=False,
-                    can_fetch_jobs=True,
-                    can_run_saved_search=True,
-                    can_create_resume=True,
-                ),
             ])
-            db.commit()
-        else:
-            # Mark pre-existing users as email_verified so they aren't locked out after migration
-            db.execute(
-                text("UPDATE users SET email_verified = 1 WHERE email_verified = 0 AND email_verification_token IS NULL")
-            )
             db.commit()
     finally:
         db.close()

@@ -192,6 +192,10 @@ async def register(
         password_hash=get_password_hash(payload.password),
         is_active=True,
         email_verified=False,
+        is_admin=False,
+        can_fetch_jobs=False,
+        can_run_saved_search=False,
+        can_create_resume=False,
         email_verification_token=token,
         email_verification_expires=expires,
     )
