@@ -24,6 +24,7 @@ from app.routers import auth, jobs, providers, stats
 from app.routers import settings as settings_router
 from app.routers import profiles as profiles_router
 from app.routers import tailor as tailor_router
+from app.routers.tailor import applications_router
 from app.routers import saved_searches as saved_searches_router
 from app.routers import admin as admin_router
 from app.services.scheduler import start_scheduler, stop_scheduler
@@ -78,6 +79,7 @@ app.include_router(stats.router)
 app.include_router(settings_router.router)
 app.include_router(profiles_router.router)
 app.include_router(tailor_router.router)
+app.include_router(applications_router)
 app.include_router(saved_searches_router.router)
 app.include_router(admin_router.router)
 

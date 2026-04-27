@@ -157,8 +157,9 @@ async def _scheduler_fetch_one(
             # URL is mandatory — no URL means nowhere to apply
             if not (j.url or "").strip():
                 continue
-            # Description is mandatory — tailoring requires it
-            if not (j.description or "").strip():
+            # Description is mandatory for tailoring — LinkedIn often returns empty
+            # descriptions on free/basic tier, so we save them anyway
+            if provider_name != "linkedin" and not (j.description or "").strip():
                 continue
             # Must be relevant to the keyword
             if not job_matches_query(j.title or "", j.description or "", keyword):
@@ -180,7 +181,10 @@ async def _scheduler_fetch_one(
             return await _scheduler_indeed_fallback(
                 keyword, rapidapi_key, location, remote_only, limit, locality, max_age_days
             )
-        print(f"[scheduler] Error from '{provider_name}' for '{keyword}': {exc}")
+        if provider_name == "linkedin":
+            print(f"[scheduler] CRITICAL LinkedIn Error for '{keyword}': {repr(exc)}")
+        else:
+            print(f"[scheduler] Error from '{provider_name}' for '{keyword}': {exc}")
         return (provider_name, keyword, [], exc)
 
 

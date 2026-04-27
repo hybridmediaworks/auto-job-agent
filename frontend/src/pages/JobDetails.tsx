@@ -1525,6 +1525,8 @@ function TailorPanel({ jobId, hasDescription, jobTitle }: { jobId: number; hasDe
   const [customPrompt, setCustomPrompt] = useState('')
   const [useTemplate, setUseTemplate] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(1)
+  const [onePage, setOnePage] = useState(false)
+  const [progressStep, setProgressStep] = useState<'resume' | 'cover'>('resume')
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const templateRef = useRef<HTMLDivElement>(null)
   const previewKey = `preview_job_${jobId}`
@@ -1559,18 +1561,29 @@ function TailorPanel({ jobId, hasDescription, jobTitle }: { jobId: number; hasDe
 
   // Generate preview (no DB save) → open modal
   const mutation = useMutation({
-    mutationFn: () => tailorApi.generatePreview(
-      jobId,
-      selectedProfileId,
-      showCustomPrompt && customPrompt.trim() ? customPrompt.trim() : undefined,
-      useTemplate ? selectedTemplate : undefined,
-    ),
+    mutationFn: () => {
+      setProgressStep('resume')
+      return tailorApi.generatePreview(
+        jobId,
+        selectedProfileId,
+        showCustomPrompt && customPrompt.trim() ? customPrompt.trim() : undefined,
+        useTemplate ? selectedTemplate : undefined,
+        onePage,
+      )
+    },
     onSuccess: (data) => {
       setPreviewData(data)
       setPreviewOpen(true)
       try { sessionStorage.setItem(previewKey, JSON.stringify(data)) } catch {}
     },
   })
+
+  // Switch progress label to "cover letter" after ~30s
+  useEffect(() => {
+    if (!mutation.isPending) { setProgressStep('resume'); return }
+    const t = setTimeout(() => setProgressStep('cover'), 30000)
+    return () => clearTimeout(t)
+  }, [mutation.isPending])
 
   // Save previewed result to DB (no AI call)
   const saveMutation = useMutation({
@@ -1693,7 +1706,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle }: { jobId: number; hasDe
             {mutation.isPending ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Generating…
+                {progressStep === 'resume' ? 'Tailoring resume…' : 'Generating cover letter…'}
               </>
             ) : displayResult ? 'Regenerate' : 'Generate'}
           </button>
@@ -1752,6 +1765,25 @@ function TailorPanel({ jobId, hasDescription, jobTitle }: { jobId: number; hasDe
             </div>
           )}
         </div>
+
+        {/* 1-page toggle */}
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={onePage}
+            onChange={e => setOnePage(e.target.checked)}
+            className="rounded"
+            style={{ accentColor: '#7DC242' }}
+          />
+          <span className="text-sm font-medium" style={{ color: onePage ? '#7DC242' : 'var(--text-muted)' }}>
+            1-Page Resume
+          </span>
+          {onePage && (
+            <span className="text-xs" style={{ color: '#6b7280' }}>
+              — 2 roles · 3 bullets max · 2-sentence summary
+            </span>
+          )}
+        </label>
 
         {/* Template selector */}
         <div className="space-y-3">

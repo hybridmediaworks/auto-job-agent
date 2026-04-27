@@ -19,7 +19,8 @@ from typing import Optional
 
 import anthropic
 
-_MODEL = "claude-sonnet-4-6"
+_MODEL = "claude-sonnet-4.6"
+_COVER_LETTER_MODEL = "claude-haiku-4.5"
 
 # ── Template layout hints appended to the resume prompt ───────────────────────
 
@@ -592,7 +593,7 @@ def _clean_dashes_in_resume_data(data: dict) -> dict:
     return data
 
 
-def _call_claude_resume(client: anthropic.Anthropic, job: dict, resume_text: str, profile_context: str, custom_prompt: Optional[str] = None, template_id: Optional[int] = None) -> dict:
+def _call_claude_resume(client: anthropic.Anthropic, job: dict, resume_text: str, profile_context: str, custom_prompt: Optional[str] = None, template_id: Optional[int] = None, one_page: Optional[bool] = False) -> dict:
     """Call Claude to produce a tailored resume JSON in the company profile format."""
     prompt = _RESUME_PROMPT.format(
         title=job.get("title", ""),
@@ -605,9 +606,19 @@ def _call_claude_resume(client: anthropic.Anthropic, job: dict, resume_text: str
         prompt += f"\n\n## Layout Instructions\n{_TEMPLATE_HINTS[template_id]}"
     if custom_prompt:
         prompt += f"\n\n## Additional Instructions from User\n{custom_prompt}"
+    if one_page:
+        prompt += (
+            "\n\n## One-Page Constraint (STRICT — do not ignore)"
+            "\nThis resume MUST fit on a single printed page. Hard limits:"
+            "\n- Include ONLY the 2 most recent roles"
+            "\n- Maximum 3 bullet points per role — keep the highest-impact ones only"
+            "\n- Summary must be exactly 2 sentences"
+            "\n- Maximum 8 skills per category"
+            "\nDo not exceed these limits under any circumstances."
+        )
     response = client.messages.create(
         model=_MODEL,
-        max_tokens=4096,
+        max_tokens=3000,
         system=_RESUME_SYSTEM,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
@@ -639,7 +650,7 @@ def _call_claude_cover_letter(
     if custom_prompt:
         prompt += f"\n\n## Additional Instructions from User\n{custom_prompt}"
     response = client.messages.create(
-        model=_MODEL,
+        model=_COVER_LETTER_MODEL,
         max_tokens=800,
         system=_COVER_LETTER_SYSTEM,
         messages=[{"role": "user", "content": prompt}],
@@ -660,6 +671,7 @@ def tailor_for_job(
     anthropic_api_key: str,
     custom_prompt: Optional[str] = None,
     template_id: Optional[int] = None,
+    one_page: bool = False,
 ) -> dict:
     """
     Full tailoring pipeline: produce a 100% job-targeted resume + cover letter.
@@ -674,7 +686,7 @@ def tailor_for_job(
     profile_context = _build_profile_context(profile_data)
 
     # ── Step 1: Tailored profile rewrite ─────────────────────────────────────
-    claude_result = _call_claude_resume(client, job, resume_text, profile_context, custom_prompt, template_id)
+    claude_result = _call_claude_resume(client, job, resume_text, profile_context, custom_prompt, template_id, one_page)
 
     keywords_targeted = claude_result.get("keywords_targeted", [])
 

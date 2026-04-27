@@ -25,6 +25,7 @@ from app.utils.api_keys import get_api_key
 from app.utils.dependencies import get_current_user, require_permission
 
 router = APIRouter(prefix="/api/jobs", tags=["tailor"])
+applications_router = APIRouter(prefix="/api/applications", tags=["applications"])
 
 
 # ── Pydantic schemas ──────────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ class TailorRequest(BaseModel):
     profile_id: Optional[int] = None   # None → use default profile
     custom_prompt: Optional[str] = None # Optional user instructions for AI generation
     template_id: Optional[int] = None  # 1=Classic, 2=Two-Column, 3=Creative
+    one_page: bool = False              # Inject strict 1-page brevity constraint
 
 
 class TailorSaveRequest(BaseModel):
@@ -152,6 +154,7 @@ async def tailor_job(
             anthropic_api_key=anthropic_key,
             custom_prompt=body.custom_prompt,
             template_id=body.template_id,
+            one_page=body.one_page,
         )
     except Exception as exc:
         raise HTTPException(
@@ -305,3 +308,68 @@ def get_tailoring(
     profile_name = profile.name if profile else "Unknown"
 
     return _serialize(ta, profile_name)
+
+
+# ── Application History ───────────────────────────────────────────────────────
+
+class ApplicationHistoryItem(BaseModel):
+    job_id: int
+    job_title: str
+    company: str
+    provider: str
+    tailored_at: str
+    fit_score: Optional[float]
+    template_id: Optional[int]
+
+
+@applications_router.get("/history", response_model=List[ApplicationHistoryItem])
+def get_application_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return all jobs that have a saved tailored application for the current user."""
+    rows = (
+        db.query(TailoredApplication, Job)
+        .join(Job, TailoredApplication.job_id == Job.id)
+        .filter(Job.user_id == current_user.id)
+        .order_by(TailoredApplication.updated_at.desc())
+        .all()
+    )
+    return [
+        ApplicationHistoryItem(
+            job_id=job.id,
+            job_title=job.title or "Untitled",
+            company=job.company or "Unknown",
+            provider=job.provider or "",
+            tailored_at=ta.updated_at.isoformat(),
+            fit_score=ta.fit_score,
+            template_id=ta.template_id,
+        )
+        for ta, job in rows
+    ]
+
+
+class DeleteApplicationsRequest(BaseModel):
+    job_ids: List[int]
+
+
+@applications_router.delete("/history")
+def delete_application_history(
+    body: DeleteApplicationsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete multiple tailored applications from history."""
+    # Only delete tailored_applications where the related Job is owned by current_user
+    # We join or filter by checking user's jobs
+    job_ids_owned_by_user = [
+        job_id for (job_id,) in db.query(Job.id).filter(Job.user_id == current_user.id, Job.id.in_(body.job_ids)).all()
+    ]
+    
+    if job_ids_owned_by_user:
+        deleted_count = db.query(TailoredApplication).filter(TailoredApplication.job_id.in_(job_ids_owned_by_user)).delete(synchronize_session=False)
+        db.commit()
+    else:
+        deleted_count = 0
+
+    return {"message": f"Deleted {deleted_count} history items"}

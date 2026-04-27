@@ -139,7 +139,7 @@ def init_db() -> None:
     # Auto-seed default users if users table is empty
     db = SessionLocal()
     try:
-        if db.query(UserModel).count() == 0:
+        if not db.query(UserModel).filter(UserModel.username == "admin").first():
             from app.utils.auth import get_password_hash
             db.add_all([
                 UserModel(

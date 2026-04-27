@@ -85,14 +85,14 @@ async def list_jobs(
     if date_from:
         try:
             d = date.fromisoformat(date_from)
-            query = query.filter(Job.created_at >= datetime(d.year, d.month, d.day))
+            query = query.filter(Job.posted_date != None, Job.posted_date >= datetime(d.year, d.month, d.day))
         except ValueError:
             pass
 
     if date_to:
         try:
             d = date.fromisoformat(date_to)
-            query = query.filter(Job.created_at < datetime(d.year, d.month, d.day) + timedelta(days=1))
+            query = query.filter(Job.posted_date != None, Job.posted_date < datetime(d.year, d.month, d.day) + timedelta(days=1))
         except ValueError:
             pass
 

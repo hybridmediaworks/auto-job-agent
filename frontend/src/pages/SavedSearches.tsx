@@ -194,7 +194,7 @@ function WizardModal({ initial, providers, onSave, onClose, saving }: WizardModa
                 </p>
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Search Name</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-muted)' }}>Search Name <span style={{ color: '#f87171' }}>*</span></label>
                 <input
                   value={name}
                   onChange={e => setName(e.target.value)}

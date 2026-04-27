@@ -272,8 +272,22 @@ function ResumeImportModal({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 {([['name','Full Name'],['title','Professional Title'],['email','Email'],['phone','Phone'],['location','Location'],['linkedin','LinkedIn'],['github','GitHub'],['portfolio','Portfolio']] as [keyof ResumeData, string][]).map(([field, label]) => (
                   <div key={field}>
-                    <label className="label">{label}</label>
-                    <input className="input" value={(data[field] as string) || ''} onChange={(e) => set(field, e.target.value)} />
+                    <label className="label">
+                      {label}
+                      {(field === 'name' || field === 'email') && <span style={{ color: '#f87171', marginLeft: '4px' }}>*</span>}
+                      {field === 'name' && <span style={{ color: '#6b7280', fontSize: '11px', marginLeft: '4px' }}>(letters only)</span>}
+                      {(field === 'linkedin' || field === 'github' || field === 'portfolio' || field === 'phone') && <span style={{ color: '#6b7280', fontSize: '11px', marginLeft: '4px' }}>(optional)</span>}
+                    </label>                    <input
+                      className="input"
+                      type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'}
+                      value={(data[field] as string) || ''}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        if (field === 'name') set(field, v.replace(/[0-9]/g, ''))
+                        else if (field === 'phone') set(field, v.replace(/[^0-9+\-()\s]/g, ''))
+                        else set(field, v)
+                      }}
+                    />
                   </div>
                 ))}
               </div>
@@ -576,27 +590,27 @@ export default function ProfileEditor() {
                 <input className="input" type="email" value={resume.email} onChange={(e) => setResume({ ...resume, email: e.target.value })} placeholder="john@email.com" />
               </div>
               <div>
-                <label className="label">Phone</label>
-                <input className="input" value={resume.phone} onChange={(e) => setResume({ ...resume, phone: e.target.value })} placeholder="+1-555-000-0000" />
+                <label className="label">Phone <span style={{ color: '#6b7280', fontSize: '11px', marginLeft: '4px' }}>(numeric value only)</span></label>
+                <input className="input" type="tel" value={resume.phone} onChange={(e) => setResume({ ...resume, phone: e.target.value.replace(/[^0-9+\-()\s]/g, '') })} placeholder="+1-555-000-0000" />
               </div>
               <div>
                 <label className="label">Location</label>
                 <input className="input" value={resume.location} onChange={(e) => setResume({ ...resume, location: e.target.value })} placeholder="New York, NY (Remote)" />
               </div>
               <div>
-                <label className="label">LinkedIn URL</label>
+                <label className="label">LinkedIn URL <span style={{ color: '#6b7280', fontSize: '11px', marginLeft: '4px' }}>(optional)</span></label>
                 <input className="input" value={resume.linkedin || ''} onChange={(e) => setResume({ ...resume, linkedin: e.target.value })} placeholder="linkedin.com/in/johndoe" />
               </div>
               <div>
-                <label className="label">GitHub URL</label>
+                <label className="label">GitHub URL <span style={{ color: '#6b7280', fontSize: '11px', marginLeft: '4px' }}>(optional)</span></label>
                 <input className="input" value={resume.github || ''} onChange={(e) => setResume({ ...resume, github: e.target.value })} placeholder="github.com/johndoe" />
               </div>
               <div>
-                <label className="label">Portfolio URL</label>
+                <label className="label">Portfolio URL <span style={{ color: '#6b7280', fontSize: '11px', marginLeft: '4px' }}>(optional)</span></label>
                 <input className="input" value={resume.portfolio || ''} onChange={(e) => setResume({ ...resume, portfolio: e.target.value })} placeholder="johndoe.dev" />
               </div>
               <div className="col-span-2">
-                <label className="label">Profile Photo</label>
+                <label className="label">Profile Photo <span style={{ color: '#6b7280', fontSize: '11px', marginLeft: '4px' }}>(optional)</span></label>
                 <div className="flex items-center gap-4">
                   {resume.photo ? (
                     <img src={resume.photo} className="w-16 h-16 rounded-full object-cover flex-shrink-0" style={{ border: '2px solid #7DC242' }} alt="Profile" />
@@ -965,7 +979,7 @@ export default function ProfileEditor() {
                 <input
                   className="input" type="number"
                   value={(profileData.salary?.desired_min as number) || ''}
-                  onChange={(e) => setProfileData({ ...profileData, salary: { ...profileData.salary, desired_min: Number(e.target.value) } })}
+                  onChange={(e) => setProfileData({ ...profileData, salary: { ...profileData.salary, desired_min: Number(e.target.value.replace(/[^0-9]/g, '')) } })}
                   placeholder="80000"
                 />
               </div>

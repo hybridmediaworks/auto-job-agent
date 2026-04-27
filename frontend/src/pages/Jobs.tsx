@@ -48,7 +48,7 @@ function getDateLabel(dateStr: string | null): string {
   yesterday.setDate(yesterday.getDate() - 1)
   if (year === today.getFullYear() && month === today.getMonth() + 1 && day === today.getDate()) return 'Today'
   if (year === yesterday.getFullYear() && month === yesterday.getMonth() + 1 && day === yesterday.getDate()) return 'Yesterday'
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  return new Date(`${dateStr.slice(0, 10)}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
 }
 
 export default function Jobs() {
@@ -450,7 +450,7 @@ export default function Jobs() {
         <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t" style={{ borderColor: 'var(--border-muted)' }}>
           <span className="text-xs font-medium text-gray-400 mr-1">
             <svg className="w-3.5 h-3.5 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            Fetched:
+            Posted:
           </span>
           {[
             { key: '', label: 'All Time' },
@@ -646,7 +646,7 @@ export default function Jobs() {
                               />
                             </td>
                             <td className="px-5 py-4 text-gray-400 text-xs hidden xl:table-cell" onClick={() => !deleteMode && navigate(`/jobs/${job.id}`)}>
-                              {job.posted_date ? new Date(job.posted_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                              {job.posted_date ? new Date(job.posted_date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : '—'}
                             </td>
                           </tr>
                         ))}

@@ -301,24 +301,36 @@ export const profilesApi = {
   },
 };
 
+export interface ApplicationHistoryItem {
+  job_id: number
+  job_title: string
+  company: string
+  provider: string
+  tailored_at: string
+  fit_score: number | null
+  template_id: number | null
+}
+
 /**
  * Tailor API
  */
 export const tailorApi = {
-  generate: async (jobId: number, profileId?: number, customPrompt?: string, templateId?: number): Promise<TailoredApplication> => {
+  generate: async (jobId: number, profileId?: number, customPrompt?: string, templateId?: number, onePage?: boolean): Promise<TailoredApplication> => {
     const response = await apiClient.post<TailoredApplication>(`/jobs/${jobId}/tailor`, {
       profile_id: profileId ?? null,
       custom_prompt: customPrompt || null,
       template_id: templateId ?? null,
+      one_page: onePage ?? false,
     });
     return response.data;
   },
 
-  generatePreview: async (jobId: number, profileId?: number, customPrompt?: string, templateId?: number): Promise<TailoredApplication> => {
+  generatePreview: async (jobId: number, profileId?: number, customPrompt?: string, templateId?: number, onePage?: boolean): Promise<TailoredApplication> => {
     const response = await apiClient.post<TailoredApplication>(`/jobs/${jobId}/tailor`, {
       profile_id: profileId ?? null,
       custom_prompt: customPrompt || null,
       template_id: templateId ?? null,
+      one_page: onePage ?? false,
     }, { params: { preview: true } });
     return response.data;
   },
@@ -341,6 +353,15 @@ export const tailorApi = {
     const params = profileId ? { profile_id: profileId } : {};
     const response = await apiClient.get<TailoredApplication | null>(`/jobs/${jobId}/tailor`, { params });
     return response.data;
+  },
+
+  getHistory: async (): Promise<ApplicationHistoryItem[]> => {
+    const response = await apiClient.get<ApplicationHistoryItem[]>('/applications/history');
+    return response.data;
+  },
+
+  deleteHistory: async (jobIds: number[]) => {
+    await apiClient.delete('/applications/history', { data: { job_ids: jobIds } });
   },
 };
 

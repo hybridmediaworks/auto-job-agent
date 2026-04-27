@@ -172,7 +172,7 @@ class LinkedInProvider(BaseJobProvider):
             title=raw.get("title") or "Untitled Position",
             company=raw.get("organization") or "Unknown Company",
             location=location_str,
-            description=raw.get("description_text") or "",
+            description=raw.get("description_text") or raw.get("description_html") or "",
             url=raw.get("url", ""),
             source_job_id=str(raw.get("id", "")),
             provider="linkedin",

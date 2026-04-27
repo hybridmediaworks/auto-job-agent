@@ -295,6 +295,8 @@ def passes_location_filter(
     # ── Layer 0: Remote gate ───────────────────────────────────────────────────
     if is_remote and not remote_only:
         return False
+    if remote_only and not is_remote:
+        return False
 
     # ── Layer 1: ISO country code (authoritative) ──────────────────────────────
     if expected_iso:
