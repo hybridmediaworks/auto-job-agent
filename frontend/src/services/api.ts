@@ -363,6 +363,23 @@ export const tailorApi = {
   deleteHistory: async (jobIds: number[]) => {
     await apiClient.delete('/applications/history', { data: { job_ids: jobIds } });
   },
+
+  manualTailor: async (payload: {
+    title: string;
+    company: string;
+    description: string;
+    location?: string;
+    address?: string;
+    url?: string;
+    profile_id?: number;
+    template_id?: number;
+    tone?: string;
+    focus_areas?: string[];
+    one_page?: boolean;
+  }): Promise<TailoredApplication> => {
+    const response = await apiClient.post<TailoredApplication>('/tailor/manual', payload);
+    return response.data;
+  },
 };
 
 /**

@@ -19,8 +19,8 @@ from typing import Optional
 
 import anthropic
 
-_MODEL = "claude-sonnet-4.6"
-_COVER_LETTER_MODEL = "claude-haiku-4.5"
+_MODEL = "claude-sonnet-4-6"
+_COVER_LETTER_MODEL = "claude-haiku-4-5"
 
 # ── Template layout hints appended to the resume prompt ───────────────────────
 
@@ -593,7 +593,18 @@ def _clean_dashes_in_resume_data(data: dict) -> dict:
     return data
 
 
-def _call_claude_resume(client: anthropic.Anthropic, job: dict, resume_text: str, profile_context: str, custom_prompt: Optional[str] = None, template_id: Optional[int] = None, one_page: Optional[bool] = False) -> dict:
+def _call_claude_resume(
+    client: anthropic.Anthropic,
+    job: dict,
+    resume_text: str,
+    profile_context: str,
+    custom_prompt: Optional[str] = None,
+    template_id: Optional[int] = None,
+    one_page: Optional[bool] = False,
+    research_context: Optional[str] = None,
+    tone: Optional[str] = None,
+    focus_areas: Optional[list] = None,
+) -> dict:
     """Call Claude to produce a tailored resume JSON in the company profile format."""
     prompt = _RESUME_PROMPT.format(
         title=job.get("title", ""),
@@ -602,6 +613,12 @@ def _call_claude_resume(client: anthropic.Anthropic, job: dict, resume_text: str
         resume_text=resume_text[:5000],
         profile_context=profile_context,
     )
+    if research_context:
+        prompt += f"\n\n## Industry Research Context\n{research_context}"
+    if tone:
+        prompt += f"\n\n## Tone\nWrite the resume in a {tone} tone."
+    if focus_areas:
+        prompt += f"\n\n## Focus Areas\nEmphasize these areas: {', '.join(focus_areas)}."
     if template_id and template_id in _TEMPLATE_HINTS:
         prompt += f"\n\n## Layout Instructions\n{_TEMPLATE_HINTS[template_id]}"
     if custom_prompt:
@@ -672,6 +689,11 @@ def tailor_for_job(
     custom_prompt: Optional[str] = None,
     template_id: Optional[int] = None,
     one_page: bool = False,
+    research_context: Optional[str] = None,
+    tone: Optional[str] = None,
+    focus_areas: Optional[list] = None,
+    location_override: Optional[str] = None,
+    address_override: Optional[str] = None,
 ) -> dict:
     """
     Full tailoring pipeline: produce a 100% job-targeted resume + cover letter.
@@ -686,11 +708,29 @@ def tailor_for_job(
     profile_context = _build_profile_context(profile_data)
 
     # ── Step 1: Tailored profile rewrite ─────────────────────────────────────
-    claude_result = _call_claude_resume(client, job, resume_text, profile_context, custom_prompt, template_id, one_page)
+    claude_result = _call_claude_resume(
+        client=client,
+        job=job,
+        resume_text=resume_text,
+        profile_context=profile_context,
+        custom_prompt=custom_prompt,
+        template_id=template_id,
+        one_page=one_page,
+        research_context=research_context,
+        tone=tone,
+        focus_areas=focus_areas,
+    )
 
     keywords_targeted = claude_result.get("keywords_targeted", [])
 
     tailored_resume_data = _build_tailored_resume_data(profile_resume_data, claude_result)
+
+    # ── Override contact fields from manual form ──────────────────────────────
+    if location_override:
+        tailored_resume_data["location"] = location_override
+    if address_override:
+        tailored_resume_data["address"] = address_override
+
     tailored_resume_text = _clean_dashes(_resume_to_plain_text(tailored_resume_data, profile_data))
 
     # ── Step 2: Cover letter ──────────────────────────────────────────────────

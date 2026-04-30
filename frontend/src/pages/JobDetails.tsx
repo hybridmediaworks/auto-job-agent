@@ -1517,7 +1517,7 @@ function TailoredBadge() {
 
 // ── Tailor Panel ──────────────────────────────────────────────────────────────
 
-function TailorPanel({ jobId, hasDescription, jobTitle }: { jobId: number; hasDescription: boolean; jobTitle: string }) {
+function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jobId: number; hasDescription: boolean; jobTitle: string; isManual?: boolean }) {
   const queryClient = useQueryClient()
   const [selectedProfileId, setSelectedProfileId] = useState<number | undefined>(undefined)
   const [result, setResult] = useState<TailoredApplication | null>(null)
@@ -1670,223 +1670,165 @@ function TailorPanel({ jobId, hasDescription, jobTitle }: { jobId: number; hasDe
 
   const displayResult = result ?? (savedTailoring as TailoredApplication | null)
   const previewTplId = useTemplate ? selectedTemplate : (previewData?.template_id ?? 1)
+  const [showRegenOptions, setShowRegenOptions] = useState(false)
 
-  return (
-    <>
-      <div className="card space-y-5">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-white">AI Tailored Application</h2>
-            <p className="text-sm text-gray-400 mt-0.5">
-              Generate a resume and cover letter tailored specifically for this job.
-            </p>
-          </div>
-          {displayResult && <TailoredBadge />}
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <CustomSelect
-            value={String(effectiveProfileId ?? '')}
-            onChange={v => setSelectedProfileId(v ? Number(v) : undefined)}
-            options={
-              profiles?.length
-                ? profiles.map(p => ({ value: String(p.id), label: `${p.name}${p.is_default ? ' (default)' : ''}` }))
-                : [{ value: '', label: 'No profiles — create one first' }]
-            }
-            className="max-w-xs"
-          />
-
-          <button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || !profiles?.length}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {mutation.isPending ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                {progressStep === 'resume' ? 'Tailoring resume…' : 'Generating cover letter…'}
-              </>
-            ) : displayResult ? 'Regenerate' : 'Generate'}
-          </button>
-
-          {!profiles?.length && (
-            <a href="/profiles" className="text-sm text-blue-600 hover:underline">
-              Create a profile first →
-            </a>
-          )}
-
-          {/* Reopen preview if closed accidentally */}
-          {previewData && !previewOpen && !mutation.isPending && (
-            <button
-              onClick={() => setPreviewOpen(true)}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium border border-[#7DC242]/40 text-[#7DC242] hover:bg-[#7DC242]/10 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              View Preview
-            </button>
-          )}
-        </div>
-
-        {/* Custom prompt toggle */}
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => setShowCustomPrompt(!showCustomPrompt)}
-            className="flex items-center gap-2 text-sm font-medium transition-colors"
-            style={{ color: showCustomPrompt ? '#7DC242' : 'var(--text-muted)' }}
-          >
-            <svg className={`w-4 h-4 transition-transform ${showCustomPrompt ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Custom Instructions {showCustomPrompt ? '(enabled)' : ''}
-          </button>
-
-          {showCustomPrompt && (
-            <div className="space-y-1.5">
-              <textarea
-                value={customPrompt}
-                onChange={(e) => setCustomPrompt(e.target.value)}
-                placeholder={"Add special instructions for the AI, e.g.:\n• Emphasize my WordPress experience\n• Use a more formal tone in the cover letter\n• Highlight my leadership experience\n• Focus on cloud/DevOps skills"}
-                className="w-full text-sm border rounded-xl p-3 resize-y placeholder:leading-relaxed"
-                style={{ background: 'var(--bg-input)', borderColor: 'var(--border-default)', color: 'var(--text-input)', minHeight: '90px' }}
-                rows={4}
-              />
-              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                These instructions will be appended to both the resume and cover letter generation prompts.
-              </p>
+  // For manual jobs with results: show hero results UI
+  if (isManual && displayResult && !mutation.isPending) {
+    return (
+      <>
+        {/* ── Hero: Documents Ready ── */}
+        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(125,194,66,0.25)', background: 'var(--bg-surface)' }}>
+          {/* Green success banner */}
+          <div className="px-6 py-4 flex items-center justify-between flex-wrap gap-3" style={{ background: 'linear-gradient(135deg, rgba(125,194,66,0.15) 0%, rgba(76,175,80,0.08) 100%)', borderBottom: '1px solid rgba(125,194,66,0.15)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(125,194,66,0.2)', border: '1px solid rgba(125,194,66,0.4)' }}>
+                <svg className="w-5 h-5" fill="none" stroke="#7DC242" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-white">Your documents are ready</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Tailored resume and cover letter generated for <span style={{ color: '#7DC242' }}>{jobTitle}</span></p>
+              </div>
             </div>
-          )}
-        </div>
-
-        {/* 1-page toggle */}
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={onePage}
-            onChange={e => setOnePage(e.target.checked)}
-            className="rounded"
-            style={{ accentColor: '#7DC242' }}
-          />
-          <span className="text-sm font-medium" style={{ color: onePage ? '#7DC242' : 'var(--text-muted)' }}>
-            1-Page Resume
-          </span>
-          {onePage && (
-            <span className="text-xs" style={{ color: '#6b7280' }}>
-              — 2 roles · 3 bullets max · 2-sentence summary
-            </span>
-          )}
-        </label>
-
-        {/* Template selector */}
-        <div className="space-y-3">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={useTemplate}
-              onChange={e => setUseTemplate(e.target.checked)}
-              className="rounded"
-              style={{ accentColor: '#7DC242' }}
-            />
-            <span className="text-sm font-medium" style={{ color: useTemplate ? '#7DC242' : 'var(--text-muted)' }}>
-              Use Resume Template
-            </span>
-          </label>
-
-          {useTemplate && (
-            <div className="flex gap-3 flex-wrap">
-              {RESUME_TEMPLATES.map(t => (
-                <TemplateCard
-                  key={t.id}
-                  template={t}
-                  isSelected={selectedTemplate === t.id}
-                  onClick={() => setSelectedTemplate(t.id)}
-                />
-              ))}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => { if (!previewData) setPreviewData(displayResult); setPreviewOpen(true) }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{ borderColor: 'rgba(125,194,66,0.4)', color: '#7DC242', background: 'rgba(125,194,66,0.08)' }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Preview Resume
+              </button>
+              <button
+                onClick={() => handleDownloadPdf(displayResult)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #7DC242 0%, #4CAF50 100%)', boxShadow: '0 4px 14px rgba(125,194,66,0.35)' }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download PDF
+              </button>
             </div>
-          )}
-        </div>
-
-        {/* Error */}
-        {mutation.isError && (
-          <div className="rounded-lg p-3 text-sm border" style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)', color: '#fca5a5' }}>
-            {(mutation.error as any)?.response?.data?.detail || 'Generation failed. Check that ANTHROPIC_API_KEY is set in Settings.'}
           </div>
-        )}
 
-        {/* Download error */}
-        {downloadError && (
-          <div className="rounded-lg p-3 text-sm border flex items-start gap-2" style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)', color: '#fca5a5' }}>
-            <span style={{ flexShrink: 0 }}>⚠</span>
-            <span>{downloadError}</span>
-            <button onClick={() => setDownloadError(null)} style={{ marginLeft: 'auto', flexShrink: 0, background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
-          </div>
-        )}
-
-        {/* Loading state */}
-        {mutation.isPending && (
-          <div className="rounded-lg p-4 text-sm flex items-center gap-3 border" style={{ background: 'rgba(59,130,246,0.1)', borderColor: 'rgba(59,130,246,0.2)', color: '#93c5fd' }}>
-            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-            Claude is reading the job description and tailoring your resume and cover letter…
-          </div>
-        )}
-
-        {/* Results — shown for previously saved tailorings */}
-        {displayResult && !mutation.isPending && (
-          <div className="space-y-5">
-            {/* Tailored Resume */}
-            <div className="space-y-2">
+          {/* Documents side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/5">
+            {/* Resume */}
+            <div className="p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">Tailored Resume</h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleDownloadPdf(displayResult)}
-                    className="flex items-center gap-1.5 text-xs px-3 py-1.5 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg transition-colors font-medium" style={{ background: 'rgba(59,130,246,0.1)' }}
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    Download PDF
-                  </button>
-                  <CopyButton text={displayResult.tailored_resume_text ?? ''} />
-                </div>
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <svg className="w-4 h-4" style={{ color: '#7DC242' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Tailored Resume
+                </h3>
+                <CopyButton text={displayResult.tailored_resume_text ?? ''} />
               </div>
               <textarea
-                className="w-full font-mono text-xs border rounded-lg p-4 leading-relaxed resize-y"
-                style={{ background: 'var(--code-bg)', borderColor: 'var(--border-default)', color: 'var(--text-secondary)' }}
-                rows={20}
+                className="w-full font-mono text-[11px] border rounded-xl p-4 leading-relaxed resize-y"
+                style={{ background: 'var(--code-bg)', borderColor: 'var(--border-default)', color: 'var(--text-secondary)', minHeight: 320 }}
+                rows={18}
                 value={displayResult.tailored_resume_text ?? ''}
-                onChange={() => {}}
                 readOnly
               />
             </div>
 
             {/* Cover Letter */}
-            <div className="space-y-2">
+            <div className="p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">Cover Letter</h3>
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Cover Letter
+                </h3>
                 <CopyButton text={displayResult.cover_letter ?? ''} />
               </div>
               <textarea
-                className="w-full text-sm border rounded-lg p-4 leading-relaxed resize-y"
-                style={{ background: 'var(--code-bg)', borderColor: 'var(--border-default)', color: 'var(--text-secondary)' }}
-                rows={14}
+                className="w-full text-xs border rounded-xl p-4 leading-relaxed resize-y"
+                style={{ background: 'var(--code-bg)', borderColor: 'var(--border-default)', color: 'var(--text-secondary)', minHeight: 320 }}
+                rows={18}
                 value={displayResult.cover_letter ?? ''}
-                onChange={() => {}}
                 readOnly
               />
             </div>
           </div>
+
+          {/* Regenerate footer */}
+          <div className="px-6 py-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+            <button
+              onClick={() => setShowRegenOptions(v => !v)}
+              className="text-xs font-medium transition-colors flex items-center gap-1.5"
+              style={{ color: showRegenOptions ? '#7DC242' : 'var(--text-faint)' }}
+            >
+              <svg className={`w-3 h-3 transition-transform ${showRegenOptions ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              Need changes? Regenerate with new options
+            </button>
+
+            {showRegenOptions && (
+              <div className="mt-4 space-y-4 pb-2">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <CustomSelect
+                    value={String(effectiveProfileId ?? '')}
+                    onChange={v => setSelectedProfileId(v ? Number(v) : undefined)}
+                    options={profiles?.length ? profiles.map(p => ({ value: String(p.id), label: `${p.name}${p.is_default ? ' (default)' : ''}` })) : [{ value: '', label: 'No profiles' }]}
+                    className="max-w-xs"
+                  />
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked={onePage} onChange={e => setOnePage(e.target.checked)} className="rounded" style={{ accentColor: '#7DC242' }} />
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>1-Page</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked={useTemplate} onChange={e => setUseTemplate(e.target.checked)} className="rounded" style={{ accentColor: '#7DC242' }} />
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Use Template</span>
+                  </label>
+                </div>
+                {useTemplate && (
+                  <div className="flex gap-3 flex-wrap">
+                    {RESUME_TEMPLATES.map(t => <TemplateCard key={t.id} template={t} isSelected={selectedTemplate === t.id} onClick={() => setSelectedTemplate(t.id)} />)}
+                  </div>
+                )}
+                <textarea
+                  value={customPrompt}
+                  onChange={e => setCustomPrompt(e.target.value)}
+                  placeholder="Custom instructions, e.g. more formal tone, emphasize leadership…"
+                  rows={2}
+                  className="w-full text-sm border rounded-xl p-3 resize-y"
+                  style={{ background: 'var(--bg-input)', borderColor: 'var(--border-default)', color: 'var(--text-input)' }}
+                />
+                <button
+                  onClick={() => mutation.mutate()}
+                  disabled={mutation.isPending || !profiles?.length}
+                  className="btn-primary disabled:opacity-50"
+                >
+                  Regenerate Documents
+                </button>
+                {mutation.isError && (
+                  <p className="text-xs" style={{ color: '#fca5a5' }}>
+                    {(mutation.error as any)?.response?.data?.detail || 'Generation failed.'}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Download error */}
+        {downloadError && (
+          <div className="rounded-lg p-3 text-sm border flex items-start gap-2" style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)', color: '#fca5a5' }}>
+            <span>⚠</span><span>{downloadError}</span>
+            <button onClick={() => setDownloadError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: 16 }}>×</button>
+          </div>
         )}
 
-        {/* Hidden off-screen template for existing saved result PDF capture */}
+        {/* Hidden off-screen template for PDF capture */}
         {displayResult?.tailored_resume_data && (() => {
           const tplId = useTemplate ? selectedTemplate : (displayResult.template_id ?? 1)
           return (
@@ -1902,10 +1844,9 @@ function TailorPanel({ jobId, hasDescription, jobTitle }: { jobId: number; hasDe
             </div>
           )
         })()}
-      </div>
 
-      {/* Preview modal — rendered via portal to escape backdrop-filter stacking context */}
-      {previewOpen && previewData?.tailored_resume_data && createPortal(
+        {/* Preview modal */}
+        {previewOpen && previewData?.tailored_resume_data && createPortal(
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={(e) => { if (e.target === e.currentTarget) setPreviewOpen(false) }}
@@ -1941,6 +1882,199 @@ function TailorPanel({ jobId, hasDescription, jobTitle }: { jobId: number; hasDe
             </div>
 
             {/* Scrollable body */}
+            <div style={{ overflowY: 'auto', flex: 1, padding: 16, position: 'relative' }}>
+              {mutation.isPending && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: 'rgba(12,18,16,0.88)', borderRadius: '0 0 16px 16px' }}>
+                  <div style={{ width: 28, height: 28, border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#7DC242', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  <span style={{ fontSize: 13, color: '#d1d5db' }}>Claude is regenerating your resume…</span>
+                </div>
+              )}
+              <div ref={previewTemplateRef} style={{ width: 794, margin: '0 auto' }}>
+                {previewTplId === 2 ? <WaleedTemplate data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                  : previewTplId === 3 ? <ArhamTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                  : previewTplId === 4 ? <SherazTemplate data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                  : previewTplId === 5 ? <WaqarTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                  : <RidaTemplate   data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                }
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  )
+}
+
+  // ── Normal return for non-manual / pending jobs ───────────────────────────
+  return (
+    <>
+      <div className="card space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-white">AI Tailored Application</h2>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Generate a resume and cover letter tailored specifically for this job.
+            </p>
+          </div>
+          {displayResult && <TailoredBadge />}
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <CustomSelect
+            value={String(effectiveProfileId ?? '')}
+            onChange={v => setSelectedProfileId(v ? Number(v) : undefined)}
+            options={
+              profiles?.length
+                ? profiles.map(p => ({ value: String(p.id), label: `${p.name}${p.is_default ? ' (default)' : ''}` }))
+                : [{ value: '', label: 'No profiles — create one first' }]
+            }
+            className="max-w-xs"
+          />
+          <button
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending || !profiles?.length}
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {mutation.isPending ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                {progressStep === 'resume' ? 'Tailoring resume…' : 'Generating cover letter…'}
+              </>
+            ) : displayResult ? 'Regenerate' : 'Generate'}
+          </button>
+          {!profiles?.length && (
+            <a href="/profiles" className="text-sm text-blue-600 hover:underline">Create a profile first →</a>
+          )}
+          {previewData && !previewOpen && !mutation.isPending && (
+            <button onClick={() => setPreviewOpen(true)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium border border-[#7DC242]/40 text-[#7DC242] hover:bg-[#7DC242]/10 transition-colors">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              View Preview
+            </button>
+          )}
+        </div>
+
+        {/* Custom prompt toggle */}
+        <div className="space-y-2">
+          <button type="button" onClick={() => setShowCustomPrompt(!showCustomPrompt)} className="flex items-center gap-2 text-sm font-medium transition-colors" style={{ color: showCustomPrompt ? '#7DC242' : 'var(--text-muted)' }}>
+            <svg className={`w-4 h-4 transition-transform ${showCustomPrompt ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            Custom Instructions {showCustomPrompt ? '(enabled)' : ''}
+          </button>
+          {showCustomPrompt && (
+            <div className="space-y-1.5">
+              <textarea value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} placeholder={"Add special instructions for the AI, e.g.:\n• Emphasize my WordPress experience\n• Use a more formal tone in the cover letter\n• Highlight my leadership experience\n• Focus on cloud/DevOps skills"} className="w-full text-sm border rounded-xl p-3 resize-y placeholder:leading-relaxed" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-default)', color: 'var(--text-input)', minHeight: '90px' }} rows={4} />
+              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>These instructions will be appended to both the resume and cover letter generation prompts.</p>
+            </div>
+          )}
+        </div>
+
+        {/* 1-page toggle */}
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" checked={onePage} onChange={e => setOnePage(e.target.checked)} className="rounded" style={{ accentColor: '#7DC242' }} />
+          <span className="text-sm font-medium" style={{ color: onePage ? '#7DC242' : 'var(--text-muted)' }}>1-Page Resume</span>
+          {onePage && <span className="text-xs" style={{ color: '#6b7280' }}>— 2 roles · 3 bullets max · 2-sentence summary</span>}
+        </label>
+
+        {/* Template selector */}
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" checked={useTemplate} onChange={e => setUseTemplate(e.target.checked)} className="rounded" style={{ accentColor: '#7DC242' }} />
+            <span className="text-sm font-medium" style={{ color: useTemplate ? '#7DC242' : 'var(--text-muted)' }}>Use Resume Template</span>
+          </label>
+          {useTemplate && (
+            <div className="flex gap-3 flex-wrap">
+              {RESUME_TEMPLATES.map(t => <TemplateCard key={t.id} template={t} isSelected={selectedTemplate === t.id} onClick={() => setSelectedTemplate(t.id)} />)}
+            </div>
+          )}
+        </div>
+
+        {/* Errors */}
+        {mutation.isError && (
+          <div className="rounded-lg p-3 text-sm border" style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)', color: '#fca5a5' }}>
+            {(mutation.error as any)?.response?.data?.detail || 'Generation failed. Check that ANTHROPIC_API_KEY is set in Settings.'}
+          </div>
+        )}
+        {downloadError && (
+          <div className="rounded-lg p-3 text-sm border flex items-start gap-2" style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)', color: '#fca5a5' }}>
+            <span style={{ flexShrink: 0 }}>⚠</span><span>{downloadError}</span>
+            <button onClick={() => setDownloadError(null)} style={{ marginLeft: 'auto', flexShrink: 0, background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
+          </div>
+        )}
+
+        {/* Loading */}
+        {mutation.isPending && (
+          <div className="rounded-lg p-4 text-sm flex items-center gap-3 border" style={{ background: 'rgba(59,130,246,0.1)', borderColor: 'rgba(59,130,246,0.2)', color: '#93c5fd' }}>
+            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            Claude is reading the job description and tailoring your resume and cover letter…
+          </div>
+        )}
+
+        {/* Results */}
+        {displayResult && !mutation.isPending && (
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-white">Tailored Resume</h3>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleDownloadPdf(displayResult)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-lg transition-colors font-medium" style={{ background: 'rgba(59,130,246,0.1)' }}>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Download PDF
+                  </button>
+                  <CopyButton text={displayResult.tailored_resume_text ?? ''} />
+                </div>
+              </div>
+              <textarea className="w-full font-mono text-xs border rounded-lg p-4 leading-relaxed resize-y" style={{ background: 'var(--code-bg)', borderColor: 'var(--border-default)', color: 'var(--text-secondary)' }} rows={20} value={displayResult.tailored_resume_text ?? ''} onChange={() => {}} readOnly />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-white">Cover Letter</h3>
+                <CopyButton text={displayResult.cover_letter ?? ''} />
+              </div>
+              <textarea className="w-full text-sm border rounded-lg p-4 leading-relaxed resize-y" style={{ background: 'var(--code-bg)', borderColor: 'var(--border-default)', color: 'var(--text-secondary)' }} rows={14} value={displayResult.cover_letter ?? ''} onChange={() => {}} readOnly />
+            </div>
+          </div>
+        )}
+
+        {/* Hidden off-screen template for PDF capture */}
+        {displayResult?.tailored_resume_data && (() => {
+          const tplId = useTemplate ? selectedTemplate : (displayResult.template_id ?? 1)
+          return (
+            <div style={{ position: 'absolute', left: -9999, top: 0, zIndex: -1, overflow: 'hidden', width: 794 }} aria-hidden="true">
+              <div ref={templateRef}>
+                {tplId === 2 ? <WaleedTemplate data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                  : tplId === 3 ? <ArhamTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                  : tplId === 4 ? <SherazTemplate data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                  : tplId === 5 ? <WaqarTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                  : <RidaTemplate data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                }
+              </div>
+            </div>
+          )
+        })()}
+      </div>
+
+      {/* Preview modal */}
+      {previewOpen && previewData?.tailored_resume_data && createPortal(
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={(e) => { if (e.target === e.currentTarget) setPreviewOpen(false) }}>
+          <div style={{ background: '#0c1210', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 900, maxHeight: '90vh' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'white' }}>Resume Preview</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button onClick={() => mutation.mutate()} disabled={mutation.isPending || saveMutation.isPending} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '6px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#d1d5db', cursor: 'pointer', opacity: (mutation.isPending || saveMutation.isPending) ? 0.5 : 1 }}>
+                  {mutation.isPending ? <><div style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Regenerating…</> : 'Regenerate'}
+                </button>
+                <button onClick={handleSaveAndDownload} disabled={saveMutation.isPending || mutation.isPending} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '6px 12px', background: '#7DC242', borderRadius: 8, color: 'white', cursor: 'pointer', border: 'none', opacity: (saveMutation.isPending || mutation.isPending) ? 0.6 : 1 }}>
+                  {saveMutation.isPending ? <><div style={{ width: 12, height: 12, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Saving…</> : <><svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Save & Download PDF</>}
+                </button>
+                <button onClick={() => setPreviewOpen(false)} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 20, fontWeight: 700, lineHeight: 1 }}>×</button>
+              </div>
+            </div>
             <div style={{ overflowY: 'auto', flex: 1, padding: 16, position: 'relative' }}>
               {mutation.isPending && (
                 <div style={{ position: 'absolute', inset: 0, zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: 'rgba(12,18,16,0.88)', borderRadius: '0 0 16px 16px' }}>
@@ -2095,37 +2229,46 @@ export default function JobDetails() {
           ))}
         </div>
 
-        <div className="mt-5 pt-5 border-t border-white/5 flex flex-wrap gap-3">
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-primary"
-            onClick={() => { if (job.status === 'DISCOVERED') setApplyPrompt(true) }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-            View on {job.provider}
-          </a>
-        </div>
+        {job.provider !== 'manual' && (
+          <div className="mt-5 pt-5 border-t border-white/5 flex flex-wrap gap-3">
+            <a
+              href={job.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-primary"
+              onClick={() => { if (job.status === 'DISCOVERED') setApplyPrompt(true) }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              View on {job.provider}
+            </a>
+          </div>
+        )}
       </div>
 
-      {/* Details Grid */}
-      <div className="card">
-        <h2 className="text-base font-semibold text-white mb-4">Job Details</h2>
-        <dl className="grid grid-cols-2 md:grid-cols-3 gap-5">
-          <Field label="Provider" value={job.provider} />
-          <Field label="Source ID" value={job.source_job_id} />
-          <Field label="Salary" value={salary} />
-          <Field label="Job Type" value={job.job_type} />
-          <Field label="Remote Type" value={job.remote_type} />
-          <Field label="Posted Date" value={job.posted_date ? new Date(job.posted_date).toLocaleDateString() : null} />
-          <Field label="Easy Apply" value={job.easy_apply ? 'Yes' : 'No'} />
-          <Field label="Created" value={new Date(job.created_at).toLocaleString()} />
-          <Field label="Updated" value={new Date(job.updated_at).toLocaleString()} />
-        </dl>
-      </div>
+      {/* For manual jobs: show AI panel right after the header */}
+      {job.provider === 'manual' && (
+        <TailorPanel jobId={Number(id)} hasDescription={!!job.description} jobTitle={job.title} isManual />
+      )}
+
+      {/* Details Grid — hidden for manual jobs (not relevant) */}
+      {job.provider !== 'manual' && (
+        <div className="card">
+          <h2 className="text-base font-semibold text-white mb-4">Job Details</h2>
+          <dl className="grid grid-cols-2 md:grid-cols-3 gap-5">
+            <Field label="Provider" value={job.provider} />
+            <Field label="Source ID" value={job.source_job_id} />
+            <Field label="Salary" value={salary} />
+            <Field label="Job Type" value={job.job_type} />
+            <Field label="Remote Type" value={job.remote_type} />
+            <Field label="Posted Date" value={job.posted_date ? new Date(job.posted_date).toLocaleDateString() : null} />
+            <Field label="Easy Apply" value={job.easy_apply ? 'Yes' : 'No'} />
+            <Field label="Created" value={new Date(job.created_at).toLocaleString()} />
+            <Field label="Updated" value={new Date(job.updated_at).toLocaleString()} />
+          </dl>
+        </div>
+      )}
 
       {/* Description */}
       <div className="card">
@@ -2135,8 +2278,10 @@ export default function JobDetails() {
         </div>
       </div>
 
-      {/* AI Tailor Panel */}
-      <TailorPanel jobId={Number(id)} hasDescription={!!job.description} jobTitle={job.title} />
+      {/* AI Tailor Panel — non-manual jobs only */}
+      {job.provider !== 'manual' && (
+        <TailorPanel jobId={Number(id)} hasDescription={!!job.description} jobTitle={job.title} />
+      )}
 
       {/* Notes & Errors */}
       {job.notes && (

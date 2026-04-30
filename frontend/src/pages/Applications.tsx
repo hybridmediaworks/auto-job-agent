@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tailorApi } from '@/services/api'
-import type { ApplicationHistoryItem, TailoredApplication } from '@/services/api'
+import type { ApplicationHistoryItem } from '@/services/api'
+import type { TailoredApplication } from '@/types'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -109,7 +110,7 @@ export default function Applications() {
   const [deleteMode, setDeleteMode] = useState(false)
   const [selectedJobs, setSelectedJobs] = useState<Set<number>>(new Set())
 
-  const { data: history, isLoading, isError, refetch } = useQuery<ApplicationHistoryItem[]>({
+  const { data: history, isLoading, isError } = useQuery<ApplicationHistoryItem[]>({
     queryKey: ['application-history'],
     queryFn: tailorApi.getHistory,
   })

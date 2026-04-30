@@ -61,6 +61,8 @@ async def list_jobs(
     # Apply filters
     if provider:
         query = query.filter(Job.provider == provider)
+    else:
+        query = query.filter(Job.provider != 'manual')
 
     if status:
         query = query.filter(Job.status == status)

@@ -17,6 +17,7 @@ import ProfileEditor from '@/pages/ProfileEditor'
 import SavedSearches from '@/pages/SavedSearches'
 import Admin from '@/pages/Admin'
 import Applications from '@/pages/Applications'
+import ManualTailor from '@/pages/ManualTailor'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
@@ -62,6 +63,7 @@ export default function App() {
                 <Route path="profiles/:id/edit" element={<ProfileEditor />} />
                 <Route path="saved-searches" element={<SavedSearches />} />
                 <Route path="applications" element={<Applications />} />
+                <Route path="manual-tailor" element={<ManualTailor />} />
               </Route>
               <Route path="/admin" element={<AdminRoute><Layout /></AdminRoute>}>
                 <Route index element={<Admin />} />

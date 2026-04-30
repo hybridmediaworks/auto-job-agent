@@ -16,15 +16,16 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.job import Job
+from app.models.job import Job, ApplicationStatus
 from app.models.profile import Profile
 from app.models.tailoring import TailoredApplication
 from app.models.user import User
-from app.services import tailor_service
+from app.services import tailor_service, research_service
 from app.utils.api_keys import get_api_key
 from app.utils.dependencies import get_current_user, require_permission
 
 router = APIRouter(prefix="/api/jobs", tags=["tailor"])
+manual_router = APIRouter(prefix="/api/tailor", tags=["manual-tailor"])
 applications_router = APIRouter(prefix="/api/applications", tags=["applications"])
 
 
@@ -347,6 +348,125 @@ def get_application_history(
         )
         for ta, job in rows
     ]
+
+
+class ManualTailorRequest(BaseModel):
+    title: str
+    company: str
+    description: str
+    location: Optional[str] = None
+    address: Optional[str] = None
+    url: Optional[str] = None
+    profile_id: Optional[int] = None
+    template_id: Optional[int] = None
+    tone: Optional[str] = None
+    focus_areas: Optional[List[str]] = None
+    one_page: bool = False
+
+
+@manual_router.post("/manual", response_model=TailoredApplicationOut)
+async def manual_tailor(
+    body: ManualTailorRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("can_create_resume")),
+):
+    """
+    Generate a tailored resume from manually entered job details.
+
+    Creates a Job record with provider='manual', optionally fetches community
+    research insights, then runs the full tailoring pipeline.
+    """
+    import uuid
+
+    # ── Resolve profile ───────────────────────────────────────────────────────
+    if body.profile_id:
+        profile = db.query(Profile).filter(
+            Profile.id == body.profile_id, Profile.user_id == current_user.id
+        ).first()
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+    else:
+        profile = db.query(Profile).filter(
+            Profile.user_id == current_user.id, Profile.is_default == True
+        ).first()
+        if not profile:
+            profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+        if not profile:
+            raise HTTPException(
+                status_code=400,
+                detail="No profiles found. Please create a profile first.",
+            )
+
+    if not profile.resume_data:
+        raise HTTPException(
+            status_code=400,
+            detail="Profile has no resume data. Please fill in your resume in the Profiles page.",
+        )
+
+    # ── Resolve API key ───────────────────────────────────────────────────────
+    anthropic_key = get_api_key("ANTHROPIC_API_KEY", db)
+    if not anthropic_key:
+        raise HTTPException(
+            status_code=400,
+            detail="ANTHROPIC_API_KEY not configured. Please set it in the Settings page.",
+        )
+
+    # ── Persist Job record ────────────────────────────────────────────────────
+    job_url = body.url or f"manual://{uuid.uuid4().hex}"
+    job = Job(
+        user_id=current_user.id,
+        url=job_url,
+        title=body.title,
+        company=body.company,
+        location=body.location or "",
+        description=body.description,
+        provider="manual",
+        status=ApplicationStatus.BOOKMARKED,
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    # ── Tailoring phase ───────────────────────────────────────────────────────
+    job_dict = {
+        "title": job.title,
+        "company": job.company,
+        "description": job.description,
+    }
+    try:
+        result = await asyncio.to_thread(
+            tailor_service.tailor_for_job,
+            job=job_dict,
+            profile_resume_data=profile.resume_data,
+            profile_data=profile.profile_data,
+            anthropic_api_key=anthropic_key,
+            template_id=body.template_id,
+            one_page=body.one_page,
+            tone=body.tone,
+            focus_areas=body.focus_areas,
+            location_override=body.location or None,
+            address_override=body.address or None,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Tailoring failed: {str(exc)}")
+
+    # ── Save TailoredApplication ──────────────────────────────────────────────
+    ta = TailoredApplication(
+        job_id=job.id,
+        profile_id=profile.id,
+        tailored_resume_text=result["tailored_resume_text"],
+        tailored_resume_data=result["tailored_resume_data"],
+        cover_letter=result["cover_letter"],
+        fit_score=result["fit_score"],
+        keywords_matched=result["keywords_matched"],
+        keywords_missing=result["keywords_missing"],
+        template_id=body.template_id,
+    )
+    db.add(ta)
+    db.commit()
+    db.refresh(ta)
+
+    return _serialize(ta, profile.name)
 
 
 class DeleteApplicationsRequest(BaseModel):
