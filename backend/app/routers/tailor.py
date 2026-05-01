@@ -314,13 +314,17 @@ def get_tailoring(
 # ── Application History ───────────────────────────────────────────────────────
 
 class ApplicationHistoryItem(BaseModel):
+    tailoring_id: int
     job_id: int
     job_title: str
     company: str
     provider: str
+    profile_id: int
+    profile_name: str
     tailored_at: str
     fit_score: Optional[float]
     template_id: Optional[int]
+    keywords_matched: List[str]
 
 
 @applications_router.get("/history", response_model=List[ApplicationHistoryItem])
@@ -330,24 +334,71 @@ def get_application_history(
 ):
     """Return all jobs that have a saved tailored application for the current user."""
     rows = (
-        db.query(TailoredApplication, Job)
+        db.query(TailoredApplication, Job, Profile)
         .join(Job, TailoredApplication.job_id == Job.id)
+        .outerjoin(Profile, TailoredApplication.profile_id == Profile.id)
         .filter(Job.user_id == current_user.id)
         .order_by(TailoredApplication.updated_at.desc())
         .all()
     )
     return [
         ApplicationHistoryItem(
+            tailoring_id=ta.id,
             job_id=job.id,
             job_title=job.title or "Untitled",
             company=job.company or "Unknown",
             provider=job.provider or "",
+            profile_id=ta.profile_id,
+            profile_name=profile.name if profile else "Unknown",
             tailored_at=ta.updated_at.isoformat(),
             fit_score=ta.fit_score,
             template_id=ta.template_id,
+            keywords_matched=ta.keywords_matched or [],
         )
-        for ta, job in rows
+        for ta, job, profile in rows
     ]
+
+
+class SimilarResumeItem(BaseModel):
+    job_id: int
+    job_title: str
+    company: str
+    tailored_at: str
+
+
+@manual_router.get("/check-similar", response_model=List[SimilarResumeItem])
+def check_similar_title(
+    title: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return existing tailored resumes whose job title shares words with the given title."""
+    words = [w.lower() for w in title.strip().split() if len(w) > 2]
+    if not words:
+        return []
+
+    rows = (
+        db.query(TailoredApplication, Job)
+        .join(Job, TailoredApplication.job_id == Job.id)
+        .filter(Job.user_id == current_user.id)
+        .order_by(TailoredApplication.updated_at.desc())
+        .all()
+    )
+
+    results = []
+    for ta, job in rows:
+        if not job.title:
+            continue
+        job_title_lower = job.title.lower()
+        if any(w in job_title_lower for w in words):
+            results.append(SimilarResumeItem(
+                job_id=job.id,
+                job_title=job.title,
+                company=job.company or "Unknown",
+                tailored_at=ta.updated_at.isoformat(),
+            ))
+
+    return results[:5]
 
 
 class ManualTailorRequest(BaseModel):
@@ -470,7 +521,7 @@ async def manual_tailor(
 
 
 class DeleteApplicationsRequest(BaseModel):
-    job_ids: List[int]
+    tailoring_ids: List[int]
 
 
 @applications_router.delete("/history")
@@ -479,15 +530,21 @@ def delete_application_history(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Delete multiple tailored applications from history."""
-    # Only delete tailored_applications where the related Job is owned by current_user
-    # We join or filter by checking user's jobs
-    job_ids_owned_by_user = [
-        job_id for (job_id,) in db.query(Job.id).filter(Job.user_id == current_user.id, Job.id.in_(body.job_ids)).all()
+    """Delete specific tailored applications by their tailoring_id, scoped to the current user."""
+    owned_ta_ids = [
+        ta_id for (ta_id,) in db.query(TailoredApplication.id)
+        .join(Job, TailoredApplication.job_id == Job.id)
+        .filter(
+            Job.user_id == current_user.id,
+            TailoredApplication.id.in_(body.tailoring_ids),
+        )
+        .all()
     ]
-    
-    if job_ids_owned_by_user:
-        deleted_count = db.query(TailoredApplication).filter(TailoredApplication.job_id.in_(job_ids_owned_by_user)).delete(synchronize_session=False)
+
+    if owned_ta_ids:
+        deleted_count = db.query(TailoredApplication).filter(
+            TailoredApplication.id.in_(owned_ta_ids)
+        ).delete(synchronize_session=False)
         db.commit()
     else:
         deleted_count = 0

@@ -302,13 +302,24 @@ export const profilesApi = {
 };
 
 export interface ApplicationHistoryItem {
+  tailoring_id: number
   job_id: number
   job_title: string
   company: string
   provider: string
+  profile_id: number
+  profile_name: string
   tailored_at: string
   fit_score: number | null
   template_id: number | null
+  keywords_matched: string[]
+}
+
+export interface SimilarResumeItem {
+  job_id: number
+  job_title: string
+  company: string
+  tailored_at: string
 }
 
 /**
@@ -360,8 +371,13 @@ export const tailorApi = {
     return response.data;
   },
 
-  deleteHistory: async (jobIds: number[]) => {
-    await apiClient.delete('/applications/history', { data: { job_ids: jobIds } });
+  deleteHistory: async (tailoringIds: number[]) => {
+    await apiClient.delete('/applications/history', { data: { tailoring_ids: tailoringIds } });
+  },
+
+  checkSimilar: async (title: string): Promise<SimilarResumeItem[]> => {
+    const response = await apiClient.get<SimilarResumeItem[]>('/tailor/check-similar', { params: { title } });
+    return response.data;
   },
 
   manualTailor: async (payload: {

@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { profilesApi, tailorApi } from '@/services/api'
+import { CustomSelect } from '@/components/CustomSelect'
+import type { SimilarResumeItem } from '@/services/api'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -92,23 +94,75 @@ const inputStyle = { background: 'var(--bg-input)', borderColor: 'var(--border-d
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 
+const DRAFT_KEY = 'manual_tailor_draft'
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY)
+}
+
 export default function ManualTailor() {
   const navigate = useNavigate()
 
-  // ── Form state ──────────────────────────────────────────────────────────────
-  const [title, setTitle] = useState('')
-  const [company, setCompany] = useState('')
-  const [location, setLocation] = useState('')
-  const [url, setUrl] = useState('')
-  const [description, setDescription] = useState('')
-  const [address, setAddress] = useState('')
-  const [tone, setTone] = useState('Professional')
-  const [focusAreas, setFocusAreas] = useState<string[]>([])
-  const [selectedProfileId, setSelectedProfileId] = useState<number | undefined>()
-  const [useTemplate, setUseTemplate] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState(1)
+  // ── Form state (init from draft if present) ──────────────────────────────────
+  const draft = loadDraft()
+  const [title, setTitle] = useState<string>(draft?.title ?? '')
+  const [company, setCompany] = useState<string>(draft?.company ?? '')
+  const [location, setLocation] = useState<string>(draft?.location ?? '')
+  const [url, setUrl] = useState<string>(draft?.url ?? '')
+  const [description, setDescription] = useState<string>(draft?.description ?? '')
+  const [address, setAddress] = useState<string>(draft?.address ?? '')
+  const [tone, setTone] = useState<string>(draft?.tone ?? 'Professional')
+  const [focusAreas, setFocusAreas] = useState<string[]>(draft?.focusAreas ?? [])
+  const [selectedProfileId, setSelectedProfileId] = useState<number | undefined>(draft?.selectedProfileId ?? undefined)
+  const [useTemplate, setUseTemplate] = useState<boolean>(draft?.useTemplate ?? false)
+  const [selectedTemplate, setSelectedTemplate] = useState<number>(draft?.selectedTemplate ?? 1)
   const [progressStep, setProgressStep] = useState<'resume' | 'cover'>('resume')
   const [error, setError] = useState<string | null>(null)
+
+  // ── Persist draft on every field change ──────────────────────────────────────
+  useEffect(() => {
+    const hasMeaningfulData = title || company || description
+    if (!hasMeaningfulData) return
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        title, company, location, url, description, address,
+        tone, focusAreas, selectedProfileId, useTemplate, selectedTemplate,
+      }))
+    } catch { /* storage full — silently skip */ }
+  }, [title, company, location, url, description, address, tone, focusAreas, selectedProfileId, useTemplate, selectedTemplate])
+
+  function clearForm() {
+    setTitle(''); setCompany(''); setLocation(''); setUrl('')
+    setDescription(''); setAddress(''); setTone('Professional')
+    setFocusAreas([]); setUseTemplate(false); setSelectedTemplate(1)
+    setError(null); setSimilarResumes([])
+    clearDraft()
+  }
+
+  // ── Similar title check ──────────────────────────────────────────────────────
+  const [similarResumes, setSimilarResumes] = useState<SimilarResumeItem[]>([])
+  const similarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleTitleChange(val: string) {
+    setTitle(val)
+    if (similarTimerRef.current) clearTimeout(similarTimerRef.current)
+    if (val.trim().length < 3) { setSimilarResumes([]); return }
+    similarTimerRef.current = setTimeout(async () => {
+      try {
+        const results = await tailorApi.checkSimilar(val.trim())
+        setSimilarResumes(results)
+      } catch {
+        setSimilarResumes([])
+      }
+    }, 600)
+  }
 
   // ── Profiles ────────────────────────────────────────────────────────────────
   const { data: profiles } = useQuery({
@@ -142,6 +196,7 @@ export default function ManualTailor() {
       })
     },
     onSuccess: (data) => {
+      clearDraft()
       navigate(`/jobs/${data.job_id}`)
     },
     onError: (err: any) => {
@@ -174,15 +229,39 @@ export default function ManualTailor() {
       {/* ── Job Details ── */}
       <Section title="Job Details">
         <div className="grid grid-cols-2 gap-4 auto-rows-auto">
-          <Field label="Job Title" required>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+              Job Title<span style={{ color: '#ef4444' }}> *</span>
+            </label>
             <input
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={e => handleTitleChange(e.target.value)}
               placeholder="e.g. Senior Software Engineer"
               className={inputClass}
               style={inputStyle}
             />
-          </Field>
+            {similarResumes.length > 0 && (
+              <div className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.25)' }}>
+                <p className="text-xs font-semibold" style={{ color: '#fde047' }}>
+                  Similar resume{similarResumes.length > 1 ? 's' : ''} already exist — you may not need to generate a new one.
+                </p>
+                <ul className="space-y-1">
+                  {similarResumes.map(r => (
+                    <li key={r.job_id} className="text-xs flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{r.job_title}</span>
+                      <span>@ {r.company}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link to="/applications" className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: '#fde047' }}>
+                  View in Resume Logs →
+                </Link>
+              </div>
+            )}
+          </div>
           <Field label="Company" required>
             <input
               value={company}
@@ -241,18 +320,14 @@ export default function ManualTailor() {
           {/* Profile */}
           <Field label="Profile">
             {profiles?.length ? (
-              <select
+              <CustomSelect
                 value={selectedProfileId ?? ''}
-                onChange={e => setSelectedProfileId(Number(e.target.value))}
-                className={inputClass}
-                style={inputStyle}
-              >
-                {profiles.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}{p.is_default ? ' (default)' : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={val => setSelectedProfileId(Number(val))}
+                options={profiles.map(p => ({
+                  value: String(p.id),
+                  label: p.name + (p.is_default ? ' (default)' : ''),
+                }))}
+              />
             ) : (
               <a href="/profiles" className="text-sm" style={{ color: '#7DC242' }}>
                 Create a profile first →
@@ -262,14 +337,11 @@ export default function ManualTailor() {
 
           {/* Tone */}
           <Field label="Tone">
-            <select
+            <CustomSelect
               value={tone}
-              onChange={e => setTone(e.target.value)}
-              className={inputClass}
-              style={inputStyle}
-            >
-              {TONES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+              onChange={setTone}
+              options={TONES.map(t => ({ value: t, label: t }))}
+            />
           </Field>
 
           {/* Focus Areas */}
@@ -365,6 +437,19 @@ export default function ManualTailor() {
             </>
           )}
         </button>
+        {(title || company || description) && !mutation.isPending && (
+          <button
+            type="button"
+            onClick={clearForm}
+            className="flex items-center gap-1.5 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+            style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)', border: '1px solid var(--border-default)' }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear Form
+          </button>
+        )}
 
         {!profiles?.length && (
           <p className="text-sm" style={{ color: '#fca5a5' }}>

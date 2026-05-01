@@ -44,7 +44,12 @@ Slack webhook (optional)
 
 ### Web UI
 
-React frontend + FastAPI backend for multi-provider job discovery and management. Auto-apply is Phase 2 — the UI focuses on fetching, reviewing, and tracking jobs.
+React frontend + FastAPI backend for a complete resume tailoring suite and job discovery.
+- **Multi-provider Search**: Fetch jobs from Indeed, Glassdoor, ZipRecruiter, and LinkedIn.
+- **Manual Tailor**: Paste any JD to generate tailored resumes using visual templates.
+- **Resume Logs**: All historical tailors are saved, searchable, and reusable.
+- **Iterative Refinement**: Refine resumes with custom prompts (e.g., "Bump experience to 10 years").
+- **Proactive Similarity Check**: Prevents redundant work by alerting you if a similar resume already exists.
 
 ---
 
@@ -380,14 +385,17 @@ All jobs are stored in `database/jobs.db` (SQLite — open in [DB Browser for SQ
 | Status | Meaning |
 |---|---|
 | `DISCOVERED` | Found by the scraper, not yet processed |
-| `PENDING` | Resume tailored successfully — ready for form submission |
-| `IN_PROGRESS` | Form submission in progress |
-| `APPLIED` | Application submitted successfully |
-| `SKIPPED` | Fit score too low, no Easy Apply button, or extraction failed |
-| `FAILED` | Unrecoverable error |
-| `BLOCKED` | Cloudflare-blocked — automatically retried on next run |
+| `BOOKMARKED` | Marked by user for follow-up |
+| `APPLIED` | Application submitted (manual or auto) |
+| `SKIPPED` | Fit score too low or manual skip |
 
-Jobs are deduplicated by URL. `BLOCKED` is the only status that gets retried — all other terminal statuses are permanent.
+### Resume Logs (Web UI)
+
+Found under the **Resume Logs** tab (formerly Applications). 
+- **View Materials**: Review tailored JSON/Text resume data.
+- **Download**: Export tailored resumes as `.txt` files.
+- **Refine**: Apply custom AI instructions to existing resumes to adjust experience years, tone, or technical focus.
+- **Similarity Check**: When using Manual Tailor, the system automatically word-matches your new job title against these logs to find existing resumes you can reuse.
 
 ---
 

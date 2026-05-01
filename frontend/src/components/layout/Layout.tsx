@@ -49,7 +49,7 @@ const navItems = [
   },
   {
     to: '/applications',
-    label: 'Applications',
+    label: 'Resume Logs',
     adminOnly: false,
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
