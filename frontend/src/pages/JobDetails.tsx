@@ -13,6 +13,8 @@ import {
   ArhamTemplate,
   SherazTemplate,
   WaqarTemplate,
+  AdeelTemplate,
+  WaleedV2Template,
   TemplateCard,
 } from '@/components/ResumeTemplates'
 
@@ -463,6 +465,8 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
                   : tplId === 3 ? <ArhamTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : tplId === 4 ? <SherazTemplate data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : tplId === 5 ? <WaqarTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                  : tplId === 6 ? <AdeelTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                  : tplId === 7 ? <WaleedV2Template data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : <RidaTemplate data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                 }
               </div>
@@ -519,6 +523,8 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
                   : previewTplId === 3 ? <ArhamTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : previewTplId === 4 ? <SherazTemplate data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : previewTplId === 5 ? <WaqarTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                  : previewTplId === 6 ? <AdeelTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                  : previewTplId === 7 ? <WaleedV2Template data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : <RidaTemplate   data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                 }
               </div>
@@ -676,6 +682,8 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
                   : tplId === 3 ? <ArhamTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : tplId === 4 ? <SherazTemplate data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : tplId === 5 ? <WaqarTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                  : tplId === 6 ? <AdeelTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                  : tplId === 7 ? <WaleedV2Template data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : <RidaTemplate data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                 }
               </div>
@@ -736,6 +744,8 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
                   : previewTplId === 3 ? <ArhamTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : previewTplId === 4 ? <SherazTemplate data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : previewTplId === 5 ? <WaqarTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                  : previewTplId === 6 ? <AdeelTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                  : previewTplId === 7 ? <WaleedV2Template data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : <RidaTemplate   data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                 }
               </div>

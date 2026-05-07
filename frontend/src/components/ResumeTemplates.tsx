@@ -11,10 +11,12 @@ export const PILL_COLORS = ['#1565c0','#00695c','#6a1b9a','#1b5e20','#bf360c','#
 
 export const RESUME_TEMPLATES = [
   { id: 1, name: 'Rida Saeed', description: 'Teal header & sidebar, skill pills, tool icons.' },
-  { id: 2, name: 'Mirza Waleed', description: 'White + green accents, photo in header, experience left.' },
+  { id: 2, name: 'Waleed', description: 'White + green accents, photo in header, experience left.' },
   { id: 3, name: 'Arham Saeed', description: 'Dark olive sidebar, key achievements, bold name right.' },
   { id: 4, name: 'Sheraz Khalid', description: 'White + orange, watermark name, expertise bullets.' },
-  { id: 5, name: 'Muhammad Waqar', description: 'White + blue initials badge, bordered skills grid, dashed separators.' },
+  { id: 5, name: 'Muhammad Waqas', description: 'White + blue initials badge, bordered skills grid, dashed separators.' },
+  { id: 6, name: 'Adeel Shahzad', description: 'Dark blue header, white/blue column layout, skill pills, tool icons.' },
+  { id: 7, name: 'Mirza Waleed', description: 'Green accents top/bottom, clean two-column layout, gray skill pills.' },
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -289,7 +291,60 @@ export function TemplateSvgSheraz() {
   )
 }
 
+export function TemplateSvgAdeel() {
+  return (
+    <svg viewBox="0 0 110 140" className="w-full h-full">
+      <rect x="0" y="0" width="110" height="140" fill="#ffffff"/>
+      <rect x="0" y="0" width="110" height="18" fill="#0d3b4f"/>
+      <rect x="25" y="4" width="60" height="5" rx="1" fill="white"/>
+      <rect x="35" y="11" width="40" height="2" rx="0.5" fill="rgba(255,255,255,0.7)"/>
+      <rect x="0" y="18" width="110" height="6" fill="#1565c0" opacity="0.1"/>
+      <circle cx="20" cy="21" r="1.5" fill="#4db6ac"/>
+      <circle cx="55" cy="21" r="1.5" fill="#4db6ac"/>
+      <circle cx="90" cy="21" r="1.5" fill="#4db6ac"/>
+      <rect x="5" y="30" width="28" height="2" rx="0.5" fill="#1565c0"/>
+      <rect x="5" y="34" width="30" height="12" rx="0.5" fill="#f8f9fa"/>
+      <rect x="5" y="50" width="28" height="2" rx="0.5" fill="#1565c0"/>
+      <rect x="5" y="54" width="12" height="4" rx="1" fill="#1565c0"/>
+      <rect x="20" y="54" width="12" height="4" rx="1" fill="#1565c0"/>
+      <rect x="5" y="60" width="12" height="4" rx="1" fill="#1565c0"/>
+      <rect x="20" y="60" width="12" height="4" rx="1" fill="#1565c0"/>
+      <rect x="40" y="30" width="65" height="2" rx="0.5" fill="#1565c0"/>
+      <rect x="40" y="34" width="65" height="4" rx="0.5" fill="#f8f9fa"/>
+      <rect x="40" y="40" width="65" height="4" rx="0.5" fill="#f8f9fa"/>
+      <rect x="40" y="46" width="65" height="4" rx="0.5" fill="#f8f9fa"/>
+      <rect x="40" y="55" width="65" height="20" rx="0.5" fill="#f8f9fa"/>
+    </svg>
+  )
+}
+
+export function TemplateSvgWaleedV2() {
+  return (
+    <svg viewBox="0 0 110 140" className="w-full h-full">
+      <rect x="0" y="0" width="110" height="140" fill="#ffffff"/>
+      <rect x="0" y="0" width="110" height="4" fill="#7DC242"/>
+      <rect x="0" y="136" width="110" height="4" fill="#7DC242"/>
+      <rect x="20" y="10" width="70" height="6" rx="1" fill="#111827"/>
+      <rect x="35" y="18" width="40" height="2.5" rx="0.5" fill="#7DC242"/>
+      <rect x="5" y="30" width="30" height="1.5" rx="0.5" fill="#7DC242"/>
+      <rect x="5" y="34" width="32" height="10" rx="0.5" fill="#f1f5f9"/>
+      <rect x="5" y="48" width="30" height="1.5" rx="0.5" fill="#7DC242"/>
+      <rect x="5" y="52" width="10" height="4" rx="1" fill="#e5e7eb"/>
+      <rect x="17" y="52" width="10" height="4" rx="1" fill="#e5e7eb"/>
+      <rect x="29" y="52" width="10" height="4" rx="1" fill="#e5e7eb"/>
+      <rect x="5" y="58" width="10" height="4" rx="1" fill="#e5e7eb"/>
+      <rect x="17" y="58" width="10" height="4" rx="1" fill="#e5e7eb"/>
+      <rect x="45" y="30" width="60" height="1.5" rx="0.5" fill="#7DC242"/>
+      <rect x="45" y="34" width="60" height="20" rx="0.5" fill="#f1f5f9"/>
+      <rect x="45" y="58" width="60" height="1.5" rx="0.5" fill="#7DC242"/>
+      <rect x="45" y="62" width="60" height="15" rx="0.5" fill="#f1f5f9"/>
+    </svg>
+  )
+}
+
 export function TemplateSvg({ id }: { id: number }) {
+  if (id === 6) return <TemplateSvgAdeel />
+  if (id === 7) return <TemplateSvgWaleedV2 />
   if (id === 3) return <TemplateSvgArham />
   if (id === 4) return <TemplateSvgSheraz />
   if (id === 5) return <TemplateSvgWaqar />
@@ -1140,3 +1195,354 @@ export function WaqarTemplate({ data, photo }: { data: Record<string, any>; phot
     </div>
   )
 }
+
+export function AdeelTemplate({ data, photo: _photo }: { data: Record<string, any>; photo?: string }) {
+  const tools = resolveTools(data.tools_list || []).slice(0, 8)
+  const skills: string[] = data.skills_list || []
+  const experience: any[] = data.experience || []
+  const education: any[] = data.education || []
+  const usefulLinks: string[] = data.useful_links || []
+
+  const BLUE = '#1565c0'
+  const DARK_BLUE = '#0d3b4f'
+  const TEAL = '#4db6ac'
+  const TEXT_GRAY = '#374151'
+  const M = 'Montserrat, Arial, sans-serif'
+  const OS = 'Open Sans, Arial, sans-serif'
+
+  const SectionHeader = ({ label }: { label: string }) => (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontFamily: M, fontSize: 16, fontWeight: 800, color: BLUE, letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ height: 2, background: TEAL, marginTop: 4, width: 40 }} />
+    </div>
+  )
+
+  return (
+    <div style={{ width: 794, minHeight: 1085, fontFamily: OS, background: '#ffffff', boxSizing: 'border-box' as const }}>
+      {/* Header */}
+      <div style={{ background: BLUE, padding: '34px 40px', textAlign: 'center' as const }}>
+        <div style={{ fontFamily: M, fontSize: 44, fontWeight: 800, color: '#FFD54F', letterSpacing: 1.5, textTransform: 'uppercase' as const }}>{data.name}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10 }}>
+          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.35)' }} />
+          <div style={{ fontFamily: M, fontSize: 13, fontWeight: 600, color: 'white', letterSpacing: 1.5, textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const }}>{data.role_title || data.title}</div>
+          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.35)' }} />
+        </div>
+      </div>
+
+      {/* Contact Bar — same blue as header, teal circle icons */}
+      <div style={{ background: BLUE, padding: '12px 40px 18px 40px', display: 'flex', justifyContent: 'center', gap: 40 }}>
+        {data.email && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: 'white', fontSize: 11 }}>✉</span>
+            </div>
+            <a href={`mailto:${data.email}`} style={{ fontSize: 11, fontWeight: 600, color: 'white', textDecoration: 'none' }}>{data.email}</a>
+          </div>
+        )}
+        {data.phone && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: 'white', fontSize: 11 }}>📱</span>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'white' }}>{data.phone}</span>
+          </div>
+        )}
+        {data.location && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: 'white', fontSize: 11 }}>📍</span>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'white' }}>{data.location}</span>
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', padding: '28px 40px 40px 40px' }}>
+        {/* Left Column */}
+        <div style={{ width: '32%', paddingRight: 28 }}>
+          {data.summary && (
+            <div style={{ marginBottom: 28 }}>
+              <SectionHeader label="About Me" />
+              <div style={{ fontSize: 10.5, color: TEXT_GRAY, lineHeight: 1.6, textAlign: 'justify' as const }}>{cleanText(data.summary)}</div>
+            </div>
+          )}
+
+          {skills.length > 0 && (
+            <div style={{ marginBottom: 28 }}>
+              <SectionHeader label="Skills:" />
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
+                {skills.map((skill, i) => (
+                  <span key={i} style={{ background: BLUE, color: 'white', fontSize: 9.5, fontWeight: 700, padding: '4px 10px', borderRadius: 2 }}>{skill}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tools.length > 0 && (
+            <div style={{ marginBottom: 28 }}>
+              <SectionHeader label="Tools:" />
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+                {tools.map((tool, i) => <ToolIconBox key={i} {...tool} size={38} />)}
+              </div>
+            </div>
+          )}
+
+          {data.portfolio_images && data.portfolio_images.length > 0 && (
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontFamily: M, fontSize: 16, fontWeight: 800, color: BLUE, letterSpacing: 0.5 }}>Portfolio: <span style={{ fontSize: 13 }}>✦</span></div>
+                <div style={{ height: 2, background: TEAL, marginTop: 4, width: 40 }} />
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                {data.portfolio_images.slice(0, 4).map((img: string, i: number) => (
+                  <img key={i} src={img} crossOrigin="anonymous" style={{ width: 'calc(50% - 3px)', height: 70, objectFit: 'cover' as const, borderRadius: 4 }} alt="Project" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {usefulLinks.length > 0 && (
+            <div>
+              <SectionHeader label="Useful Links:" />
+              {usefulLinks.map((link, i) => (
+                <div key={i} style={{ fontSize: 10, color: TEXT_GRAY, marginBottom: 5, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                  <span style={{ color: BLUE, fontWeight: 700, flexShrink: 0 }}>•</span>
+                  <a href={ensureUrl(link)} style={{ color: BLUE, textDecoration: 'none', wordBreak: 'break-all' as const }}>{link}</a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Column Divider */}
+        <div style={{ width: '1.5px', background: TEAL, flexShrink: 0, alignSelf: 'stretch' }} />
+
+        {/* Right Column */}
+        <div style={{ flex: 1, paddingLeft: 28 }}>
+          {experience.length > 0 && (
+            <div style={{ marginBottom: 32 }}>
+              <SectionHeader label="Experience" />
+              {experience.map((exp: any, i: number) => (
+                <div key={i} style={{ marginBottom: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                    <div>
+                      <span style={{ fontFamily: M, fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>{exp.title}</span>
+                      <span style={{ margin: '0 8px', color: '#cbd5e1' }}>|</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: BLUE }}>{exp.company}</span>
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>
+                      | {exp.start_date} - {exp.end_date || 'Present'} |
+                    </div>
+                  </div>
+                  {(exp.bullets || []).map((b: string, j: number) => (
+                    <div key={j} style={{ display: 'flex', gap: 8, marginBottom: 4, paddingLeft: 4 }}>
+                      <span style={{ color: BLUE, fontSize: 14, flexShrink: 0 }}>•</span>
+                      <span style={{ fontSize: 10.5, color: TEXT_GRAY, lineHeight: 1.55, textAlign: 'justify' as const }}>{cleanText(b)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {education.length > 0 && (
+            <div>
+              <SectionHeader label="Education" />
+              <div style={{ display: 'flex', gap: 40 }}>
+                {education.map((edu: any, i: number) => (
+                  <div key={i} style={{ flex: 1 }}>
+                    <div style={{ fontFamily: M, fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>{edu.institution}</div>
+                    <div style={{ fontSize: 11, color: TEXT_GRAY, marginTop: 3 }}>{edu.degree}</div>
+                    <div style={{ fontSize: 10.5, color: '#64748b', marginTop: 2 }}>{edu.graduation}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function WaleedV2Template({ data, photo }: { data: Record<string, any>; photo?: string }) {
+  const tools = resolveTools(data.tools_list || []).slice(0, 10)
+  const skills: string[] = data.skills_list || []
+  const experience: any[] = data.experience || []
+  const education: any[] = data.education || []
+  const usefulLinks: string[] = data.useful_links || []
+  const effectivePhoto = photo || data.photo
+
+  const GREEN = '#7DC242'
+  const TEXT_DARK = '#111827'
+  const TEXT_GRAY = '#4b5563'
+  const M = 'Montserrat, Arial, sans-serif'
+  const OS = 'Open Sans, Arial, sans-serif'
+
+  const SectionHeader = ({ label }: { label: string }) => (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontFamily: M, fontSize: 13, fontWeight: 800, color: TEXT_DARK, letterSpacing: 1.5, textTransform: 'uppercase' as const }}>{label}</div>
+      <div style={{ height: 2, background: GREEN, marginTop: 5, width: '100%' }} />
+    </div>
+  )
+
+  return (
+    <div style={{ width: 794, minHeight: 1123, fontFamily: OS, background: '#ffffff', boxSizing: 'border-box' as const }}>
+
+      {/* ── Solid Green Header Banner ──────────────────────────────── */}
+      <div style={{ background: GREEN, padding: '30px 44px 26px 44px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+          {effectivePhoto && (
+            <img src={effectivePhoto} crossOrigin="anonymous"
+              style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover' as const, border: '3px solid rgba(255,255,255,0.55)', flexShrink: 0 }}
+              alt="Profile" />
+          )}
+          <div style={{ flex: 1, textAlign: effectivePhoto ? 'left' as const : 'center' as const }}>
+            <div style={{ fontFamily: M, fontSize: 44, fontWeight: 900, color: TEXT_DARK, letterSpacing: 0.5, textTransform: 'uppercase' as const, lineHeight: 1.1 }}>
+              {data.name}
+            </div>
+            <div style={{ fontFamily: M, fontSize: 13, fontWeight: 700, color: '#1a1a1a', marginTop: 8, letterSpacing: 2.5, textTransform: 'uppercase' as const }}>
+              {data.role_title || data.title}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Contact Row ────────────────────────────────────────────── */}
+      <div style={{ background: 'white', padding: '14px 44px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `2.5px solid ${GREEN}`, fontSize: 11.5, color: TEXT_DARK, fontWeight: 600 }}>
+        {data.location && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>📍</span>
+            <span>{data.location}</span>
+          </div>
+        )}
+        {data.phone && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>☎</span>
+            <span>{data.phone}</span>
+          </div>
+        )}
+        {data.email && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+            <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>✉</span>
+            <a href={`mailto:${data.email}`} style={{ color: 'inherit', textDecoration: 'none' }}>{data.email}</a>
+          </div>
+        )}
+      </div>
+
+      {/* ── Two Columns ────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', padding: '22px 44px 32px 44px', gap: 0 }}>
+
+        {/* Left Column */}
+        <div style={{ width: '37%', paddingRight: 26, borderRight: '1.5px solid #d1d5db' }}>
+
+          {data.summary && (
+            <div style={{ marginBottom: 20 }}>
+              <SectionHeader label="About Me" />
+              <div style={{ fontSize: 10.5, color: TEXT_GRAY, lineHeight: 1.75, textAlign: 'justify' as const }}>{cleanText(data.summary)}</div>
+            </div>
+          )}
+
+          {skills.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <SectionHeader label="Skills" />
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '5px 5px' }}>
+                {skills.map((skill, i) => (
+                  <span key={i} style={{ background: '#e5e7eb', color: '#111827', fontSize: 10, fontWeight: 700, padding: '4px 10px', borderRadius: 4, border: '1px solid #d1d5db' }}>{skill}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {data.portfolio_images && data.portfolio_images.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontFamily: M, fontSize: 13, fontWeight: 800, color: TEXT_DARK, letterSpacing: 1.5, textTransform: 'uppercase' as const }}>
+                  Portfolio <span style={{ fontSize: 11, verticalAlign: 'middle' }}>✦</span>
+                </div>
+                <div style={{ height: 2, background: GREEN, marginTop: 5, width: '100%' }} />
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+                {data.portfolio_images.slice(0, 4).map((img: string, i: number) => (
+                  <img key={i} src={img} crossOrigin="anonymous"
+                    style={{ width: 'calc(50% - 3px)', height: 72, objectFit: 'cover' as const, borderRadius: 4 }}
+                    alt="Project" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {usefulLinks.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <SectionHeader label="Useful Links" />
+              {usefulLinks.map((link, i) => (
+                <div key={i} style={{ fontSize: 9.5, color: TEXT_DARK, marginBottom: 5, display: 'flex', gap: 7 }}>
+                  <span style={{ color: GREEN, fontWeight: 700, flexShrink: 0 }}>•</span>
+                  <a href={ensureUrl(link)} style={{ color: 'inherit', textDecoration: 'none', wordBreak: 'break-all' as const }}>{link}</a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right Column */}
+        <div style={{ flex: 1, paddingLeft: 26 }}>
+
+          {experience.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <SectionHeader label="Experience" />
+              {experience.map((exp: any, i: number) => (
+                <div key={i} style={{ marginBottom: 16 }}>
+                  <div style={{ fontWeight: 700, fontSize: 12, color: GREEN, fontFamily: M }}>{exp.company}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 2, marginBottom: 4 }}>
+                    <div style={{ fontWeight: 700, fontSize: 12, color: TEXT_DARK }}>{exp.title}</div>
+                    <div style={{ fontSize: 10.5, color: TEXT_GRAY, fontWeight: 600, flexShrink: 0, marginLeft: 8 }}>({exp.start_date} - {exp.end_date || 'Present'})</div>
+                  </div>
+                  {exp.description && (
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: TEXT_DARK, lineHeight: 1.55, marginBottom: 4, textAlign: 'justify' as const }}>
+                      {cleanText(exp.description)}
+                    </div>
+                  )}
+                  {(exp.bullets || []).map((b: string, j: number) => (
+                    <div key={j} style={{ display: 'flex', gap: 7, marginBottom: 3 }}>
+                      <span style={{ color: GREEN, fontSize: 11, lineHeight: '1.6', flexShrink: 0 }}>•</span>
+                      <span style={{ fontSize: 10.5, color: TEXT_GRAY, lineHeight: 1.6, textAlign: 'justify' as const }}>{cleanText(b)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {education.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <SectionHeader label="Education" />
+              <div style={{ display: 'flex', gap: 24 }}>
+                {education.map((edu: any, i: number) => (
+                  <div key={i} style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 12, color: TEXT_DARK, fontFamily: M }}>{edu.institution}</div>
+                    <div style={{ fontSize: 11, color: TEXT_GRAY, marginTop: 2 }}>{edu.degree}</div>
+                    <div style={{ fontSize: 10, color: TEXT_GRAY, marginTop: 1 }}>{edu.graduation}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tools.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <SectionHeader label="Tools" />
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+                {tools.map((tool, i) => <ToolIconBox key={i} {...tool} size={40} />)}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Bottom Green Bar ───────────────────────────────────────── */}
+      <div style={{ height: 8, background: GREEN }} />
+    </div>
+  )
+}
+

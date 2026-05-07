@@ -892,6 +892,67 @@ export default function ProfileEditor() {
               <p className="text-sm text-gray-400 italic text-center py-2">No projects added yet.</p>
             )}
           </div>
+
+          {/* Useful Links */}
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-white">Useful Links</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Portfolio/project URLs shown in the Adeel Shahzad and Mirza Waleed templates.</p>
+              </div>
+              <button
+                onClick={() => setResume({ ...resume, useful_links: [...(resume.useful_links || []), ''] })}
+                className="btn-secondary text-sm"
+              >+ Add Link</button>
+            </div>
+            {(resume.useful_links || []).map((link: string, idx: number) => (
+              <div key={idx} className="flex gap-2 items-center">
+                <input
+                  className="input flex-1 text-sm"
+                  value={link}
+                  onChange={(e) => {
+                    const ls = [...(resume.useful_links || [])]; ls[idx] = e.target.value; setResume({ ...resume, useful_links: ls })
+                  }}
+                  placeholder="https://yourproject.com"
+                />
+                <button onClick={() => setResume({ ...resume, useful_links: (resume.useful_links || []).filter((_: string, i: number) => i !== idx) })} className="text-red-400 hover:text-red-300 text-sm flex-shrink-0">✕</button>
+              </div>
+            ))}
+            {!(resume.useful_links || []).length && (
+              <p className="text-sm text-gray-400 italic text-center py-2">No links added yet.</p>
+            )}
+          </div>
+
+          {/* Portfolio Images */}
+          <div className="card space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-white">Portfolio Screenshots</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Direct image URLs of project screenshots — shown as a 2×2 grid in the Adeel Shahzad and Mirza Waleed templates.</p>
+              </div>
+              <button
+                onClick={() => setResume({ ...resume, portfolio_images: [...(resume.portfolio_images || []), ''] })}
+                className="btn-secondary text-sm"
+              >+ Add Image</button>
+            </div>
+            {(resume.portfolio_images || []).map((img: string, idx: number) => (
+              <div key={idx} className="flex gap-2 items-center">
+                <input
+                  className="input flex-1 text-sm"
+                  value={img}
+                  onChange={(e) => {
+                    const imgs = [...(resume.portfolio_images || [])]; imgs[idx] = e.target.value; setResume({ ...resume, portfolio_images: imgs })
+                  }}
+                  placeholder="https://cdn.yoursite.com/screenshot.png"
+                />
+                {img && <img src={img} alt="" className="w-12 h-8 object-cover rounded flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />}
+                <button onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })} className="text-red-400 hover:text-red-300 text-sm flex-shrink-0">✕</button>
+              </div>
+            ))}
+            {!(resume.portfolio_images || []).length && (
+              <p className="text-sm text-gray-400 italic text-center py-2">No screenshots added yet.</p>
+            )}
+          </div>
         </div>
       )}
 

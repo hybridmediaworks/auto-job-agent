@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tailorApi } from '@/services/api'
 import type { ApplicationHistoryItem } from '@/services/api'
 import type { TailoredApplication } from '@/types'
-import { RidaTemplate, WaleedTemplate, ArhamTemplate, SherazTemplate, WaqarTemplate } from '@/components/ResumeTemplates'
+import { RidaTemplate, WaleedTemplate, ArhamTemplate, SherazTemplate, WaqarTemplate, AdeelTemplate, WaleedV2Template } from '@/components/ResumeTemplates'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -57,6 +57,8 @@ function TemplateRenderer({ tplId, data, photo }: { tplId: number; data: Record<
   if (tplId === 3) return <ArhamTemplate data={data} photo={photo} />
   if (tplId === 4) return <SherazTemplate data={data} photo={photo} />
   if (tplId === 5) return <WaqarTemplate data={data} photo={photo} />
+  if (tplId === 6) return <AdeelTemplate data={data} photo={photo} />
+  if (tplId === 7) return <WaleedV2Template data={data} photo={photo} />
   return <p className="text-sm text-center py-8" style={{ color: 'var(--text-muted)' }}>No template selected for this resume.</p>
 }
 

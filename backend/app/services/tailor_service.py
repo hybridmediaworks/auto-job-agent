@@ -32,7 +32,7 @@ _TEMPLATE_HINTS: dict[int, str] = {
         "Keep skills_list short individual labels for pills. Keep tools_list as individual tool names."
     ),
     2: (
-        "LAYOUT: Mirza Waleed template. White page. Full-width white header with circular photo, "
+        "LAYOUT: Waleed template. White page. Full-width white header with circular photo, "
         "large name, title, green accent bar, contact row. Green horizontal divider. "
         "White left column: Experience with company circles + bullets, Education side by side. "
         "White right column: About Me, Skills pills, Tools icons, Portfolio. "
@@ -53,6 +53,22 @@ _TEMPLATE_HINTS: dict[int, str] = {
         "additional_skills: 4-6 soft skills relevant to this role (e.g. 'Cross-functional Collaboration', 'Agile Project Management'). "
         "skills_list: technical skills short labels for the Technical Skills flat section. "
         "tools_list: specific tools and workflow items (e.g. 'Git', 'Jira', 'CI/CD') for the Tools and Workflow flat section."
+    ),
+    6: (
+        "LAYOUT: Adeel Shahzad template. Dark blue centered header (name in large white uppercase text). Light gray contact bar below header with icons for email, phone, location. "
+        "Two-column layout: Left column (~32%) has About Me summary, Skills (blue rectangular pills), Tools (icons), Portfolio images, and Useful Links. "
+        "Right column (~68%) has Experience (title and company on one line with blue pipe separator, dates on right), Education. "
+        "Blue accent color throughout (#1565c0). "
+        "Keep skills_list short labels for blue rectangular pills. Keep tools_list as individual tool names for icons."
+    ),
+    7: (
+        "LAYOUT: Mirza Waleed template. Light green top and bottom bars (#7DC242). "
+        "Full-width header with circular photo on left, large name and bold green role title. "
+        "Contact info row with location, phone, email icons. "
+        "Two-column layout: Left column (~35%) has ABOUT ME summary, SKILLS (light gray pills), PORTFOLIO thumbnails, USEFUL LINKS. "
+        "Right column (~65%) has EXPERIENCE (company in green bold text, title and dates on next line), EDUCATION, TOOLS. "
+        "Green accent color throughout (#7DC242). "
+        "Keep skills_list labels short for gray pills. Keep tools_list as individual tool names for icons."
     ),
 }
 
@@ -382,7 +398,7 @@ def _build_tailored_resume_data(original: dict, claude_result: dict) -> dict:
         tailored["additional_skills"] = claude_result["additional_skills"]
 
     # ── Pass-through fields (kept from original, not tailored) ───────────────
-    for passthrough_field in ("languages", "projects"):
+    for passthrough_field in ("languages", "projects", "useful_links", "portfolio_images"):
         if passthrough_field not in tailored and original.get(passthrough_field):
             tailored[passthrough_field] = original[passthrough_field]
 
