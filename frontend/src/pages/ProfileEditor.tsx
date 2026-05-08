@@ -928,29 +928,66 @@ export default function ProfileEditor() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-white">Portfolio Screenshots</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Direct image URLs of project screenshots — shown as a 2×2 grid in the Adeel Shahzad and Mirza Waleed templates.</p>
+                <p className="text-xs text-gray-500 mt-0.5">Up to 4 screenshots — shown as a fixed-size grid in the Adeel Shahzad and Mirza Waleed templates.</p>
               </div>
-              <button
-                onClick={() => setResume({ ...resume, portfolio_images: [...(resume.portfolio_images || []), ''] })}
-                className="btn-secondary text-sm"
-              >+ Add Image</button>
+              <div className="flex gap-2">
+                <label className="btn-secondary text-sm cursor-pointer">
+                  ↑ Upload
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = (ev) => {
+                        const dataUrl = ev.target?.result as string
+                        setResume((r: any) => ({ ...r, portfolio_images: [...(r.portfolio_images || []), dataUrl] }))
+                      }
+                      reader.readAsDataURL(file)
+                      e.target.value = ''
+                    }}
+                  />
+                </label>
+                <button
+                  onClick={() => setResume({ ...resume, portfolio_images: [...(resume.portfolio_images || []), ''] })}
+                  className="btn-secondary text-sm"
+                >+ URL</button>
+              </div>
             </div>
-            {(resume.portfolio_images || []).map((img: string, idx: number) => (
-              <div key={idx} className="flex gap-2 items-center">
-                <input
-                  className="input flex-1 text-sm"
-                  value={img}
-                  onChange={(e) => {
-                    const imgs = [...(resume.portfolio_images || [])]; imgs[idx] = e.target.value; setResume({ ...resume, portfolio_images: imgs })
-                  }}
-                  placeholder="https://cdn.yoursite.com/screenshot.png"
-                />
-                {img && <img src={img} alt="" className="w-12 h-8 object-cover rounded flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />}
-                <button onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })} className="text-red-400 hover:text-red-300 text-sm flex-shrink-0">✕</button>
+            {(resume.portfolio_images || []).length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {(resume.portfolio_images || []).slice(0, 4).map((img: string, idx: number) => (
+                  <div key={idx} className="relative group">
+                    <img src={img} alt="" className="w-full h-24 object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3' }} />
+                    <button
+                      onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })}
+                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >✕</button>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+            {(resume.portfolio_images || []).some((img: string) => !img.startsWith('data:')) && (
+              <div className="space-y-2">
+                {(resume.portfolio_images || []).map((img: string, idx: number) => !img.startsWith('data:') && (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <input
+                      className="input flex-1 text-sm"
+                      value={img}
+                      onChange={(e) => {
+                        const imgs = [...(resume.portfolio_images || [])]; imgs[idx] = e.target.value; setResume({ ...resume, portfolio_images: imgs })
+                      }}
+                      placeholder="https://cdn.yoursite.com/screenshot.png"
+                    />
+                    <button onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })} className="text-red-400 hover:text-red-300 text-sm flex-shrink-0">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
             {!(resume.portfolio_images || []).length && (
-              <p className="text-sm text-gray-400 italic text-center py-2">No screenshots added yet.</p>
+              <p className="text-sm text-gray-400 italic text-center py-2">Upload images or paste direct image URLs — max 4.</p>
             )}
           </div>
         </div>
