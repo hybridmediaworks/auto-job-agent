@@ -315,33 +315,61 @@ export interface ApplicationHistoryItem {
   keywords_matched: string[]
 }
 
+export interface ApplicationHistoryPage {
+  items: ApplicationHistoryItem[]
+  total: number
+  limit: number
+  offset: number
+}
+
 export interface SimilarResumeItem {
   job_id: number
   job_title: string
   company: string
   tailored_at: string
+  score: number
 }
 
 /**
  * Tailor API
  */
 export const tailorApi = {
-  generate: async (jobId: number, profileId?: number, customPrompt?: string, templateId?: number, onePage?: boolean): Promise<TailoredApplication> => {
+  generate: async (
+    jobId: number,
+    profileId?: number,
+    customPrompt?: string,
+    templateId?: number,
+    onePage?: boolean,
+    tone?: string,
+    focusAreas?: string[],
+  ): Promise<TailoredApplication> => {
     const response = await apiClient.post<TailoredApplication>(`/jobs/${jobId}/tailor`, {
       profile_id: profileId ?? null,
       custom_prompt: customPrompt || null,
       template_id: templateId ?? null,
       one_page: onePage ?? false,
+      tone: tone || null,
+      focus_areas: focusAreas && focusAreas.length > 0 ? focusAreas : null,
     });
     return response.data;
   },
 
-  generatePreview: async (jobId: number, profileId?: number, customPrompt?: string, templateId?: number, onePage?: boolean): Promise<TailoredApplication> => {
+  generatePreview: async (
+    jobId: number,
+    profileId?: number,
+    customPrompt?: string,
+    templateId?: number,
+    onePage?: boolean,
+    tone?: string,
+    focusAreas?: string[],
+  ): Promise<TailoredApplication> => {
     const response = await apiClient.post<TailoredApplication>(`/jobs/${jobId}/tailor`, {
       profile_id: profileId ?? null,
       custom_prompt: customPrompt || null,
       template_id: templateId ?? null,
       one_page: onePage ?? false,
+      tone: tone || null,
+      focus_areas: focusAreas && focusAreas.length > 0 ? focusAreas : null,
     }, { params: { preview: true } });
     return response.data;
   },
@@ -366,8 +394,13 @@ export const tailorApi = {
     return response.data;
   },
 
-  getHistory: async (): Promise<ApplicationHistoryItem[]> => {
-    const response = await apiClient.get<ApplicationHistoryItem[]>('/applications/history');
+  getHistory: async (params?: { limit?: number; offset?: number }): Promise<ApplicationHistoryPage> => {
+    const response = await apiClient.get<ApplicationHistoryPage>('/applications/history', {
+      params: {
+        limit: params?.limit ?? 50,
+        offset: params?.offset ?? 0,
+      },
+    });
     return response.data;
   },
 

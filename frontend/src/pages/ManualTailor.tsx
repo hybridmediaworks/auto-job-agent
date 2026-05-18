@@ -8,11 +8,13 @@ import type { SimilarResumeItem } from '@/services/api'
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const RESUME_TEMPLATES = [
-  { id: 1, name: 'Rida Saeed',      description: 'Teal header & sidebar',    accent: '#00b4b4', bg: '#0d3333' },
-  { id: 2, name: 'Mirza Waleed',    description: 'Green accents, photo',      accent: '#4CAF50', bg: '#0d1f0d' },
+  { id: 1, name: 'Rida Saeed',      description: 'Teal header & sidebar',     accent: '#00b4b4', bg: '#0d3333' },
+  { id: 2, name: 'Waleed',          description: 'Green accents, photo',      accent: '#4CAF50', bg: '#0d1f0d' },
   { id: 3, name: 'Arham Saeed',     description: 'Dark olive sidebar',        accent: '#8B7355', bg: '#1e2a0f' },
   { id: 4, name: 'Sheraz Khalid',   description: 'Orange, watermark name',    accent: '#FF6B35', bg: '#2a150a' },
   { id: 5, name: 'Muhammad Waqar',  description: 'Blue initials, grid skills',accent: '#3B5BD9', bg: '#0a1528' },
+  { id: 6, name: 'Adeel Shahzad',   description: 'Dark blue, skill pills',    accent: '#1565c0', bg: '#0d1f33' },
+  { id: 7, name: 'Mirza Waleed',    description: 'Green bars, two-column',    accent: '#7DC242', bg: '#0d1f0d' },
 ]
 
 const TONES = ['Professional', 'Technical', 'Enthusiastic']
@@ -123,6 +125,7 @@ export default function ManualTailor() {
   const [selectedProfileId, setSelectedProfileId] = useState<number | undefined>(draft?.selectedProfileId ?? undefined)
   const [useTemplate, setUseTemplate] = useState<boolean>(draft?.useTemplate ?? false)
   const [selectedTemplate, setSelectedTemplate] = useState<number>(draft?.selectedTemplate ?? 1)
+  const [onePage, setOnePage] = useState<boolean>(draft?.onePage ?? false)
   const [progressStep, setProgressStep] = useState<'resume' | 'cover'>('resume')
   const [error, setError] = useState<string | null>(null)
 
@@ -133,15 +136,16 @@ export default function ManualTailor() {
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         title, company, location, url, description, address,
-        tone, focusAreas, selectedProfileId, useTemplate, selectedTemplate,
+        tone, focusAreas, selectedProfileId, useTemplate, selectedTemplate, onePage,
       }))
     } catch { /* storage full — silently skip */ }
-  }, [title, company, location, url, description, address, tone, focusAreas, selectedProfileId, useTemplate, selectedTemplate])
+  }, [title, company, location, url, description, address, tone, focusAreas, selectedProfileId, useTemplate, selectedTemplate, onePage])
 
   function clearForm() {
     setTitle(''); setCompany(''); setLocation(''); setUrl('')
     setDescription(''); setAddress(''); setTone('Professional')
     setFocusAreas([]); setUseTemplate(false); setSelectedTemplate(1)
+    setOnePage(false)
     setError(null); setSimilarResumes([])
     clearDraft()
   }
@@ -193,6 +197,7 @@ export default function ManualTailor() {
         template_id: useTemplate ? selectedTemplate : undefined,
         tone,
         focus_areas: focusAreas.length > 0 ? focusAreas : undefined,
+        one_page: onePage,
       })
     },
     onSuccess: (data) => {
@@ -366,6 +371,27 @@ export default function ManualTailor() {
                 )
               })}
             </div>
+          </Field>
+
+          {/* One-page toggle */}
+          <Field label="Length">
+            <label className="flex items-center gap-2 cursor-pointer select-none pt-0.5">
+              <input
+                type="checkbox"
+                checked={onePage}
+                onChange={e => setOnePage(e.target.checked)}
+                className="rounded"
+                style={{ accentColor: '#7DC242' }}
+              />
+              <span className="text-sm font-medium" style={{ color: onePage ? '#7DC242' : 'var(--text-muted)' }}>
+                1-Page Resume
+              </span>
+              {onePage && (
+                <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
+                  — 2 roles · 3 bullets max · 2-sentence summary
+                </span>
+              )}
+            </label>
           </Field>
 
         </Section>

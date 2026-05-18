@@ -8,10 +8,11 @@ GET  /api/jobs/{job_id}/tailor  — retrieve last saved tailoring for this job
 """
 
 import asyncio
+import re
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Set
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -36,6 +37,8 @@ class TailorRequest(BaseModel):
     custom_prompt: Optional[str] = None # Optional user instructions for AI generation
     template_id: Optional[int] = None  # 1=Classic, 2=Two-Column, 3=Creative
     one_page: bool = False              # Inject strict 1-page brevity constraint
+    tone: Optional[str] = None          # Professional | Technical | Enthusiastic
+    focus_areas: Optional[List[str]] = None  # e.g. ['Architecture', 'Leadership']
 
 
 class TailorSaveRequest(BaseModel):
@@ -156,6 +159,8 @@ async def tailor_job(
             custom_prompt=body.custom_prompt,
             template_id=body.template_id,
             one_page=body.one_page,
+            tone=body.tone,
+            focus_areas=body.focus_areas,
         )
     except Exception as exc:
         raise HTTPException(
@@ -327,21 +332,39 @@ class ApplicationHistoryItem(BaseModel):
     keywords_matched: List[str]
 
 
-@applications_router.get("/history", response_model=List[ApplicationHistoryItem])
+class ApplicationHistoryResponse(BaseModel):
+    items: List[ApplicationHistoryItem]
+    total: int
+    limit: int
+    offset: int
+
+
+@applications_router.get("/history", response_model=ApplicationHistoryResponse)
 def get_application_history(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return all jobs that have a saved tailored application for the current user."""
-    rows = (
+    """Return paginated tailored applications for the current user, newest first."""
+    base_q = (
         db.query(TailoredApplication, Job, Profile)
         .join(Job, TailoredApplication.job_id == Job.id)
         .outerjoin(Profile, TailoredApplication.profile_id == Profile.id)
         .filter(Job.user_id == current_user.id)
+    )
+
+    total = base_q.with_entities(TailoredApplication.id).count()
+
+    rows = (
+        base_q
         .order_by(TailoredApplication.updated_at.desc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
-    return [
+
+    items = [
         ApplicationHistoryItem(
             tailoring_id=ta.id,
             job_id=job.id,
@@ -357,6 +380,7 @@ def get_application_history(
         )
         for ta, job, profile in rows
     ]
+    return ApplicationHistoryResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 class SimilarResumeItem(BaseModel):
@@ -364,6 +388,57 @@ class SimilarResumeItem(BaseModel):
     job_title: str
     company: str
     tailored_at: str
+    score: float
+
+
+# Title noise — seniority/employment qualifiers that shouldn't drive similarity.
+_TITLE_STOPWORDS: Set[str] = {
+    "senior", "sr", "junior", "jr", "lead", "principal", "staff", "chief",
+    "head", "of", "the", "and", "for", "to", "a", "an", "ii", "iii", "iv",
+    "i", "remote", "hybrid", "onsite", "contract", "fulltime", "parttime",
+    "intern", "associate", "level", "experienced", "entry",
+}
+
+# Token canonicalization: many ways to say the same role.
+_TITLE_SYNONYMS: dict[str, str] = {
+    "frontend": "frontend", "front": "frontend", "fe": "frontend",
+    "backend": "backend", "back": "backend", "be": "backend",
+    "fullstack": "fullstack", "full": "fullstack",
+    "dev": "developer", "developer": "developer", "engineer": "developer",
+    "eng": "developer", "swe": "developer", "programmer": "developer",
+    "sde": "developer",
+    "ml": "ml", "ai": "ml",
+    "ds": "data", "data": "data",
+    "ops": "devops", "devops": "devops", "sre": "devops", "platform": "devops",
+    "pm": "productmanager", "product": "productmanager", "tpm": "productmanager",
+    "qa": "qa", "sdet": "qa", "test": "qa", "tester": "qa",
+    "ux": "design", "ui": "design", "designer": "design", "design": "design",
+    "react": "react", "reactjs": "react",
+    "node": "node", "nodejs": "node",
+    "py": "python", "python": "python",
+    "js": "javascript", "javascript": "javascript", "ts": "typescript",
+    "typescript": "typescript",
+}
+
+
+def _tokenize_title(title: str) -> Set[str]:
+    """Normalize a job title to a set of canonical tokens."""
+    lowered = re.sub(r"[^a-z0-9\s]", " ", title.lower())
+    tokens = [t for t in lowered.split() if t and t not in _TITLE_STOPWORDS]
+    # Map synonyms to canonical form; drop tokens shorter than 2 chars
+    canon = {_TITLE_SYNONYMS.get(t, t) for t in tokens if len(t) >= 2}
+    return canon
+
+
+def _title_similarity(a: str, b: str) -> float:
+    """Jaccard similarity between canonicalized token sets. Range [0, 1]."""
+    ta = _tokenize_title(a)
+    tb = _tokenize_title(b)
+    if not ta or not tb:
+        return 0.0
+    inter = len(ta & tb)
+    union = len(ta | tb)
+    return inter / union if union else 0.0
 
 
 @manual_router.get("/check-similar", response_model=List[SimilarResumeItem])
@@ -372,9 +447,13 @@ def check_similar_title(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return existing tailored resumes whose job title shares words with the given title."""
-    words = [w.lower() for w in title.strip().split() if len(w) > 2]
-    if not words:
+    """
+    Return existing tailored resumes whose job title is semantically close to the input.
+
+    Uses canonicalized token Jaccard similarity (handles synonyms like
+    Engineer/Developer, Frontend/FE, abbreviations) rather than raw substring matching.
+    """
+    if not title.strip():
         return []
 
     rows = (
@@ -385,20 +464,24 @@ def check_similar_title(
         .all()
     )
 
-    results = []
+    threshold = 0.4
+    scored: list[tuple[float, SimilarResumeItem]] = []
     for ta, job in rows:
         if not job.title:
             continue
-        job_title_lower = job.title.lower()
-        if any(w in job_title_lower for w in words):
-            results.append(SimilarResumeItem(
+        score = _title_similarity(title, job.title)
+        if score >= threshold:
+            scored.append((score, SimilarResumeItem(
                 job_id=job.id,
                 job_title=job.title,
                 company=job.company or "Unknown",
                 tailored_at=ta.updated_at.isoformat(),
-            ))
+                score=round(score, 2),
+            )))
 
-    return results[:5]
+    # Sort by score desc, then by most recent
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [item for _, item in scored[:5]]
 
 
 class ManualTailorRequest(BaseModel):
@@ -462,27 +545,11 @@ async def manual_tailor(
             detail="ANTHROPIC_API_KEY not configured. Please set it in the Settings page.",
         )
 
-    # ── Persist Job record ────────────────────────────────────────────────────
-    job_url = body.url or f"manual://{uuid.uuid4().hex}"
-    job = Job(
-        user_id=current_user.id,
-        url=job_url,
-        title=body.title,
-        company=body.company,
-        location=body.location or "",
-        description=body.description,
-        provider="manual",
-        status=ApplicationStatus.BOOKMARKED,
-    )
-    db.add(job)
-    db.commit()
-    db.refresh(job)
-
-    # ── Tailoring phase ───────────────────────────────────────────────────────
+    # ── Tailoring phase (run BEFORE persisting Job so failures don't orphan rows) ─
     job_dict = {
-        "title": job.title,
-        "company": job.company,
-        "description": job.description,
+        "title": body.title,
+        "company": body.company,
+        "description": body.description,
     }
     try:
         result = await asyncio.to_thread(
@@ -501,21 +568,39 @@ async def manual_tailor(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Tailoring failed: {str(exc)}")
 
-    # ── Save TailoredApplication ──────────────────────────────────────────────
-    ta = TailoredApplication(
-        job_id=job.id,
-        profile_id=profile.id,
-        tailored_resume_text=result["tailored_resume_text"],
-        tailored_resume_data=result["tailored_resume_data"],
-        cover_letter=result["cover_letter"],
-        fit_score=result["fit_score"],
-        keywords_matched=result["keywords_matched"],
-        keywords_missing=result["keywords_missing"],
-        template_id=body.template_id,
+    # ── Persist Job + TailoredApplication atomically ──────────────────────────
+    job_url = body.url or f"manual://{uuid.uuid4().hex}"
+    job = Job(
+        user_id=current_user.id,
+        url=job_url,
+        title=body.title,
+        company=body.company,
+        location=body.location or "",
+        description=body.description,
+        provider="manual",
+        status=ApplicationStatus.BOOKMARKED,
     )
-    db.add(ta)
-    db.commit()
-    db.refresh(ta)
+    try:
+        db.add(job)
+        db.flush()  # assign job.id without committing
+
+        ta = TailoredApplication(
+            job_id=job.id,
+            profile_id=profile.id,
+            tailored_resume_text=result["tailored_resume_text"],
+            tailored_resume_data=result["tailored_resume_data"],
+            cover_letter=result["cover_letter"],
+            fit_score=result["fit_score"],
+            keywords_matched=result["keywords_matched"],
+            keywords_missing=result["keywords_missing"],
+            template_id=body.template_id,
+        )
+        db.add(ta)
+        db.commit()
+        db.refresh(ta)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save tailored application: {str(exc)}")
 
     return _serialize(ta, profile.name)
 

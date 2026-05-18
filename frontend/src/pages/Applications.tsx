@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { tailorApi } from '@/services/api'
-import type { ApplicationHistoryItem } from '@/services/api'
+import type { ApplicationHistoryItem, ApplicationHistoryPage } from '@/services/api'
+
+const PAGE_SIZE = 25
 import type { TailoredApplication } from '@/types'
 import { RidaTemplate, WaleedTemplate, ArhamTemplate, SherazTemplate, WaqarTemplate, AdeelTemplate, WaleedV2Template } from '@/components/ResumeTemplates'
 
@@ -294,11 +296,17 @@ export default function Applications() {
   const [selected, setSelected] = useState<ApplicationHistoryItem | null>(null)
   const [deleteMode, setDeleteMode] = useState(false)
   const [selectedJobs, setSelectedJobs] = useState<Set<number>>(new Set())
+  const [page, setPage] = useState(0)
 
-  const { data: history, isLoading, isError } = useQuery<ApplicationHistoryItem[]>({
-    queryKey: ['application-history'],
-    queryFn: tailorApi.getHistory,
+  const { data, isLoading, isError } = useQuery<ApplicationHistoryPage>({
+    queryKey: ['application-history', page],
+    queryFn: () => tailorApi.getHistory({ limit: PAGE_SIZE, offset: page * PAGE_SIZE }),
+    placeholderData: keepPreviousData,
   })
+
+  const history = data?.items
+  const total = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const currentPageIds = history?.map(j => j.tailoring_id) ?? []
   const allOnPageSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedJobs.has(id))
@@ -322,6 +330,7 @@ export default function Applications() {
       setSelectedJobs(new Set())
       setDeleteMode(false)
       qc.invalidateQueries({ queryKey: ['application-history'] })
+      setPage(0)
     },
     onError: () => {
       alert('Failed to delete. Please try again.')
@@ -485,6 +494,34 @@ export default function Applications() {
           </table>
         )}
       </div>
+
+      {/* Pagination */}
+      {!isLoading && !isError && total > PAGE_SIZE && (
+        <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
+          <span>
+            Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ borderColor: 'var(--border-muted)', color: 'var(--text-secondary)' }}
+            >
+              Previous
+            </button>
+            <span className="px-2">Page {page + 1} of {totalPages}</span>
+            <button
+              onClick={() => setPage(p => (p + 1 < totalPages ? p + 1 : p))}
+              disabled={page + 1 >= totalPages}
+              className="px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ borderColor: 'var(--border-muted)', color: 'var(--text-secondary)' }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {selected && <ResumeModal item={selected} onClose={() => setSelected(null)} />}
     </div>

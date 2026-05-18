@@ -153,6 +153,8 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
   const [useTemplate, setUseTemplate] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(1)
   const [onePage, setOnePage] = useState(false)
+  const [tone, setTone] = useState<string>('')
+  const [focusAreas, setFocusAreas] = useState<string[]>([])
   const [progressStep, setProgressStep] = useState<'resume' | 'cover'>('resume')
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const templateRef = useRef<HTMLDivElement>(null)
@@ -196,6 +198,8 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
         showCustomPrompt && customPrompt.trim() ? customPrompt.trim() : undefined,
         useTemplate ? selectedTemplate : undefined,
         onePage,
+        tone || undefined,
+        focusAreas.length > 0 ? focusAreas : undefined,
       )
     },
     onSuccess: (data) => {
@@ -611,6 +615,51 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
           <span className="text-sm font-medium" style={{ color: onePage ? '#7DC242' : 'var(--text-muted)' }}>1-Page Resume</span>
           {onePage && <span className="text-xs" style={{ color: '#6b7280' }}>— 2 roles · 3 bullets max · 2-sentence summary</span>}
         </label>
+
+        {/* Tone */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Tone (optional)</label>
+          <div className="flex gap-2 flex-wrap">
+            {['Professional', 'Technical', 'Enthusiastic'].map(t => (
+              <button
+                type="button"
+                key={t}
+                onClick={() => setTone(tone === t ? '' : t)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                style={tone === t
+                  ? { background: 'rgba(125,194,66,0.15)', borderColor: '#7DC242', color: '#7DC242' }
+                  : { background: 'transparent', borderColor: 'var(--border-default)', color: 'var(--text-secondary)' }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Focus areas */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Focus areas (optional)</label>
+          <div className="flex gap-2 flex-wrap">
+            {['Architecture', 'Leadership', 'Coding', 'Product Sense', 'Cloud / DevOps', 'Data / ML'].map(area => {
+              const active = focusAreas.includes(area)
+              return (
+                <button
+                  type="button"
+                  key={area}
+                  onClick={() =>
+                    setFocusAreas(prev => active ? prev.filter(a => a !== area) : [...prev, area])
+                  }
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+                  style={active
+                    ? { background: 'rgba(125,194,66,0.15)', borderColor: '#7DC242', color: '#7DC242' }
+                    : { background: 'transparent', borderColor: 'var(--border-default)', color: 'var(--text-secondary)' }}
+                >
+                  {area}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         {/* Template selector */}
         <div className="space-y-3">
