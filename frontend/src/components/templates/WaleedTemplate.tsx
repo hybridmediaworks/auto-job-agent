@@ -1,4 +1,4 @@
-import { ensureUrl, cleanText, companyBgColor, resolveTools, ToolIconBox, PILL_COLORS } from './shared'
+import { ensureUrl, cleanText, companyBgColor, resolveTools, ToolIconBox, PILL_COLORS, nonEmpty } from './shared'
 import type { TemplateProps } from './shared'
 
 export function WaleedTemplate({ data, photo }: TemplateProps) {
@@ -61,7 +61,7 @@ export function WaleedTemplate({ data, photo }: TemplateProps) {
                         <div style={{ fontSize: 10, color: '#6b7280' }}>{exp.start_date} – {exp.end_date || 'Present'}</div>
                       </div>
                     </div>
-                    {(exp.bullets || []).map((b: string, j: number) => (
+                    {nonEmpty(exp.bullets).map((b: string, j: number) => (
                       <div key={j} style={{ display: 'flex', gap: 5, marginLeft: 46, marginBottom: 2 }}>
                         <span style={{ color: '#7DC242', fontSize: 11, lineHeight: '1.6', flexShrink: 0 }}>•</span>
                         <span style={{ fontSize: 10.5, color: '#374151', lineHeight: 1.6 }}>{cleanText(b)}</span>

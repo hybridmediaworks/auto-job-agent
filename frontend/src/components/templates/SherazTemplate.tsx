@@ -1,4 +1,4 @@
-import { ensureUrl, cleanText } from './shared'
+import { ensureUrl, cleanText, nonEmpty } from './shared'
 import type { TemplateProps } from './shared'
 
 export function SherazTemplate({ data, photo: _photo }: TemplateProps) {
@@ -113,7 +113,7 @@ export function SherazTemplate({ data, photo: _photo }: TemplateProps) {
                   <div style={{ fontFamily: IO, fontSize: 11, fontWeight: 400, color: '#777777', marginBottom: 3 }}>from {exp.start_date} – {exp.end_date || 'Present'}</div>
                   <div style={{ fontFamily: IO, fontSize: 14, fontWeight: 700, color: '#333333', lineHeight: 1.25 }}>{exp.title}</div>
                   <div style={{ fontFamily: IO, fontSize: 13, fontWeight: 400, color: '#666666', marginBottom: 6, marginTop: 2 }}>{exp.company}</div>
-                  {(exp.bullets || []).map((b: string, j: number) => (
+                  {nonEmpty(exp.bullets).map((b: string, j: number) => (
                     <div key={j} style={{ fontFamily: IO, fontSize: 13, fontWeight: 400, color: '#4a4a4a', lineHeight: 1.72, marginBottom: 4 }}>{cleanText(b)}</div>
                   ))}
                 </div>

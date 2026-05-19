@@ -1,4 +1,4 @@
-import { ensureUrl, cleanText } from './shared'
+import { ensureUrl, cleanText, nonEmpty } from './shared'
 import type { TemplateProps } from './shared'
 
 export function WaqarTemplate({ data, photo }: TemplateProps) {
@@ -78,7 +78,7 @@ export function WaqarTemplate({ data, photo }: TemplateProps) {
                 <div style={{ fontFamily: FO, fontSize: 11, color: BODY, lineHeight: 1.75, marginTop: 4 }}>{cleanText(exp.company_description)}</div>
               )}
               <div style={{ marginTop: 5 }}>
-                {(exp.bullets || []).map((b: string, j: number) => (
+                {nonEmpty(exp.bullets).map((b: string, j: number) => (
                   <div key={j} style={{ display: 'flex', gap: 7, marginBottom: 2 }}>
                     <span style={{ fontFamily: FO, color: BODY, fontSize: 12, lineHeight: '1.7', flexShrink: 0 }}>•</span>
                     <span style={{ fontFamily: FO, fontSize: 11, color: BODY, lineHeight: 1.7 }}>{cleanText(b)}</span>
@@ -171,7 +171,7 @@ export function WaqarTemplate({ data, photo }: TemplateProps) {
                 <div style={{ fontFamily: FO, fontSize: 11, color: BODY, lineHeight: 1.7, marginTop: 3 }}>{cleanText(proj.description)}</div>
               )}
               <div style={{ marginTop: 5 }}>
-                {(proj.bullets || []).map((b: string, j: number) => (
+                {nonEmpty(proj.bullets).map((b: string, j: number) => (
                   <div key={j} style={{ display: 'flex', gap: 7, marginBottom: 2 }}>
                     <span style={{ fontFamily: FO, color: BODY, fontSize: 12, lineHeight: '1.7', flexShrink: 0 }}>•</span>
                     <span style={{ fontFamily: FO, fontSize: 11, color: BODY, lineHeight: 1.7 }}>{cleanText(b)}</span>

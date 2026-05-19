@@ -1,12 +1,12 @@
-import { ensureUrl, cleanText, resolveTools, ToolIconBox, PortfolioGrid } from './shared'
+import { ensureUrl, cleanText, resolveTools, ToolIconBox, PortfolioGrid, nonEmpty } from './shared'
 import type { TemplateProps } from './shared'
 
 export function AdeelTemplate({ data, photo: _photo }: TemplateProps) {
-  const tools = resolveTools(data.tools_list || []).slice(0, 8)
-  const skills: string[] = data.skills_list || []
+  const tools = resolveTools(nonEmpty(data.tools_list)).slice(0, 8)
+  const skills: string[] = nonEmpty(data.skills_list)
   const experience: any[] = data.experience || []
   const education: any[] = data.education || []
-  const usefulLinks: string[] = data.useful_links || []
+  const usefulLinks: string[] = nonEmpty(data.useful_links)
 
   const BLUE = '#1565c0'
   const TEAL = '#4db6ac'
@@ -140,7 +140,7 @@ export function AdeelTemplate({ data, photo: _photo }: TemplateProps) {
                       | {exp.start_date} - {exp.end_date || 'Present'} |
                     </div>
                   </div>
-                  {(exp.bullets || []).map((b: string, j: number) => (
+                  {nonEmpty(exp.bullets).map((b: string, j: number) => (
                     <div key={j} style={{ display: 'flex', gap: 8, marginBottom: 4, paddingLeft: 4 }}>
                       <span style={{ color: BLUE, fontSize: 14, flexShrink: 0, lineHeight: 1.4 }}>•</span>
                       <span style={{ fontSize: 10.5, color: TEXT, lineHeight: 1.55, textAlign: 'justify' as const }}>{cleanText(b)}</span>

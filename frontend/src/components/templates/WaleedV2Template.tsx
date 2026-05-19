@@ -1,12 +1,12 @@
-import { ensureUrl, cleanText, resolveTools, ToolIconBox, PortfolioGrid } from './shared'
+import { ensureUrl, cleanText, resolveTools, ToolIconBox, PortfolioGrid, nonEmpty } from './shared'
 import type { TemplateProps } from './shared'
 
 export function WaleedV2Template({ data, photo }: TemplateProps) {
-  const tools = resolveTools(data.tools_list || []).slice(0, 10)
-  const skills: string[] = data.skills_list || []
+  const tools = resolveTools(nonEmpty(data.tools_list)).slice(0, 10)
+  const skills: string[] = nonEmpty(data.skills_list)
   const experience: any[] = data.experience || []
   const education: any[] = data.education || []
-  const usefulLinks: string[] = data.useful_links || []
+  const usefulLinks: string[] = nonEmpty(data.useful_links)
   const effectivePhoto = photo || data.photo
 
   const GREEN = '#72ff4f'
@@ -144,7 +144,7 @@ export function WaleedV2Template({ data, photo }: TemplateProps) {
                       {cleanText(exp.description)}
                     </div>
                   )}
-                  {(exp.bullets || []).map((b: string, j: number) => (
+                  {nonEmpty(exp.bullets).map((b: string, j: number) => (
                     <div key={j} style={{ display: 'flex', gap: 7, marginBottom: 3 }}>
                       <span style={{ color: TEXT_GREEN, fontSize: 11, lineHeight: '1.6', flexShrink: 0 }}>•</span>
                       <span style={{ fontSize: 10.5, color: TEXT_BLACK, lineHeight: 1.6, textAlign: 'justify' as const }}>{cleanText(b)}</span>

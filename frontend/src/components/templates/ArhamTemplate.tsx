@@ -1,4 +1,4 @@
-import { cleanText, resolveTools, ToolIconBox } from './shared'
+import { cleanText, resolveTools, ToolIconBox, nonEmpty } from './shared'
 import type { TemplateProps } from './shared'
 
 export function ArhamTemplate({ data, photo }: TemplateProps) {
@@ -124,7 +124,7 @@ export function ArhamTemplate({ data, photo }: TemplateProps) {
                         <div>{exp.end_date || 'Present'}</div>
                       </div>
                     </div>
-                    {(exp.bullets || []).map((b: string, j: number) => (
+                    {nonEmpty(exp.bullets).map((b: string, j: number) => (
                       <div key={j} style={{ display: 'flex', gap: 6, marginBottom: 3 }}>
                         <span style={{ color: '#555555', fontSize: 12, lineHeight: '1.6', flexShrink: 0 }}>•</span>
                         <span style={{ fontFamily: OS, fontSize: 12, fontWeight: 400, color: '#555555', lineHeight: 1.65 }}>{cleanText(b)}</span>

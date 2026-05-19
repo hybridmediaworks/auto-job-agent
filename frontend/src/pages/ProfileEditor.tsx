@@ -7,6 +7,44 @@ import type { ResumeData, ResumeExperience, ResumeEducation, ResumeLanguage, Res
 
 type Tab = 'resume' | 'personal' | 'availability'
 
+/**
+ * Strip empty strings out of resume arrays before save.
+ * Empty link/image/bullet entries would otherwise render as empty bullets in
+ * the generated resume templates.
+ */
+function sanitizeResumeForSave(resume: any): any {
+  const clean = { ...resume }
+
+  // String arrays — drop empty/whitespace-only entries
+  for (const field of ['useful_links', 'portfolio_images', 'skills_list', 'tools_list', 'key_achievements', 'expertise_bullets', 'additional_skills', 'skills_bullets'] as const) {
+    if (Array.isArray(clean[field])) {
+      clean[field] = clean[field].filter((s: any) => typeof s === 'string' && s.trim().length > 0)
+    }
+  }
+
+  // Experience bullets
+  if (Array.isArray(clean.experience)) {
+    clean.experience = clean.experience.map((exp: any) => ({
+      ...exp,
+      bullets: Array.isArray(exp?.bullets)
+        ? exp.bullets.filter((b: any) => typeof b === 'string' && b.trim().length > 0)
+        : exp?.bullets,
+    }))
+  }
+
+  // Project bullets
+  if (Array.isArray(clean.projects)) {
+    clean.projects = clean.projects.map((proj: any) => ({
+      ...proj,
+      bullets: Array.isArray(proj?.bullets)
+        ? proj.bullets.filter((b: any) => typeof b === 'string' && b.trim().length > 0)
+        : proj?.bullets,
+    }))
+  }
+
+  return clean
+}
+
 function Spinner() {
   return (
     <div className="flex items-center justify-center h-64">
@@ -432,6 +470,23 @@ export default function ProfileEditor() {
   const [importError, setImportError] = useState<string | null>(null)
   const [importPreview, setImportPreview] = useState<ResumeData | null>(null)
 
+  // Portfolio image state — per-image load status and full-screen preview
+  const [imgStatus, setImgStatus] = useState<Record<number, 'ok' | 'error'>>({})
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null)
+
+  // Reset per-image status when the image list changes (re-validates on edit)
+  useEffect(() => {
+    setImgStatus({})
+  }, [(resume as any).portfolio_images?.length])
+
+  // Close preview with ESC
+  useEffect(() => {
+    if (!previewSrc) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewSrc(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [previewSrc])
+
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', id],
     queryFn: () => profilesApi.get(Number(id)),
@@ -449,7 +504,7 @@ export default function ProfileEditor() {
   const saveMutation = useMutation({
     mutationFn: () => profilesApi.update(Number(id), {
       name: profileName,
-      resume_data: resume,
+      resume_data: sanitizeResumeForSave(resume),
       profile_data: profileData,
     }),
     onSuccess: () => {
@@ -958,30 +1013,71 @@ export default function ProfileEditor() {
             </div>
             {(resume.portfolio_images || []).length > 0 && (
               <div className="grid grid-cols-2 gap-2">
-                {(resume.portfolio_images || []).slice(0, 4).map((img: string, idx: number) => (
-                  <div key={idx} className="relative group">
-                    <img src={img} alt="" className="w-full h-24 object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3' }} />
-                    <button
-                      onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })}
-                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >✕</button>
-                  </div>
-                ))}
+                {(resume.portfolio_images || []).slice(0, 4).map((img: string, idx: number) => {
+                  const failed = imgStatus[idx] === 'error'
+                  const isEmpty = !img || !img.trim()
+                  return (
+                    <div key={idx} className="relative group">
+                      {failed || isEmpty ? (
+                        <div className="w-full h-24 rounded flex flex-col items-center justify-center text-center px-2"
+                             style={{ background: 'rgba(239,68,68,0.08)', border: '1px dashed rgba(239,68,68,0.35)' }}>
+                          <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#fca5a5' }}>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z" />
+                          </svg>
+                          <span className="text-[10px] font-medium leading-tight" style={{ color: '#fca5a5' }}>
+                            {isEmpty ? 'No URL provided' : 'Image not accessible'}
+                          </span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewSrc(img)}
+                          className="w-full h-24 rounded overflow-hidden block cursor-zoom-in"
+                          style={{ padding: 0, border: 'none', background: 'rgba(255,255,255,0.04)' }}
+                          title="Click to preview full-size"
+                        >
+                          <img
+                            src={img}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onLoad={() => setImgStatus(s => ({ ...s, [idx]: 'ok' }))}
+                            onError={() => setImgStatus(s => ({ ...s, [idx]: 'error' }))}
+                          />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })}
+                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove image"
+                      >✕</button>
+                    </div>
+                  )
+                })}
               </div>
             )}
             {(resume.portfolio_images || []).some((img: string) => !img.startsWith('data:')) && (
               <div className="space-y-2">
                 {(resume.portfolio_images || []).map((img: string, idx: number) => !img.startsWith('data:') && (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <input
-                      className="input flex-1 text-sm"
-                      value={img}
-                      onChange={(e) => {
-                        const imgs = [...(resume.portfolio_images || [])]; imgs[idx] = e.target.value; setResume({ ...resume, portfolio_images: imgs })
-                      }}
-                      placeholder="https://cdn.yoursite.com/screenshot.png"
-                    />
-                    <button onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })} className="text-red-400 hover:text-red-300 text-sm flex-shrink-0">✕</button>
+                  <div key={idx} className="flex flex-col gap-1">
+                    <div className="flex gap-2 items-center">
+                      <input
+                        className="input flex-1 text-sm"
+                        value={img}
+                        onChange={(e) => {
+                          const imgs = [...(resume.portfolio_images || [])]; imgs[idx] = e.target.value; setResume({ ...resume, portfolio_images: imgs })
+                        }}
+                        placeholder="https://cdn.yoursite.com/screenshot.png"
+                      />
+                      <button onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })} className="text-red-400 hover:text-red-300 text-sm flex-shrink-0">✕</button>
+                    </div>
+                    {img.trim() && imgStatus[idx] === 'error' && (
+                      <p className="text-xs flex items-center gap-1.5" style={{ color: '#fca5a5' }}>
+                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Image URL is not accessible — check the link or hosting permissions.
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1191,6 +1287,47 @@ export default function ProfileEditor() {
           }}
           onCancel={() => setImportPreview(null)}
         />
+      )}
+
+      {/* Full-screen image preview */}
+      {previewSrc && createPortal(
+        <div
+          onClick={() => setPreviewSrc(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 32, cursor: 'zoom-out',
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image preview"
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); setPreviewSrc(null) }}
+            aria-label="Close preview"
+            style={{
+              position: 'absolute', top: 16, right: 16,
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.12)', color: 'white',
+              border: '1px solid rgba(255,255,255,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', fontSize: 18, lineHeight: 1,
+            }}
+          >✕</button>
+          <img
+            src={previewSrc}
+            alt="Preview"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '92vw', maxHeight: '88vh',
+              objectFit: 'contain',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+              borderRadius: 8, cursor: 'default',
+            }}
+          />
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -27,6 +27,12 @@ export function cleanText(text: string): string {
     .replace(/`([^`]+)`/g, '$1')
 }
 
+/** Return only non-empty trimmed strings — used to drop blank bullets/links/images at render time. */
+export function nonEmpty(arr: unknown): string[] {
+  if (!Array.isArray(arr)) return []
+  return arr.filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+}
+
 export function companyBgColor(name: string): string {
   const colors = ['#1565c0','#00695c','#6a1b9a','#1b5e20','#c62828','#0277bd','#e65100','#37474f']
   let hash = 0
@@ -100,7 +106,7 @@ export function resolveTools(toolNames: string[]): ToolEntry[] {
  * next section.
  */
 export function PortfolioGrid({ images, gap = 5, borderRadius = 4 }: { images: string[]; gap?: number; borderRadius?: number }) {
-  const imgs = images.slice(0, 4)
+  const imgs = nonEmpty(images).slice(0, 4)
   const count = imgs.length
   if (count === 0) return null
 

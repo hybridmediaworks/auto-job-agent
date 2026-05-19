@@ -15,6 +15,8 @@ export {
   companyBgColor,
   resolveTools,
   ToolIconBox,
+  PortfolioGrid,
+  nonEmpty,
 } from './templates/shared'
 
 export {
