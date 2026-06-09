@@ -210,6 +210,17 @@ export interface ResumeData {
   key_achievements?: string[];
   languages?: ResumeLanguage[];
   projects?: ResumeProject[];
+  // Profile-editable extras + fields produced by AI tailoring (rendered by templates)
+  address?: string;
+  useful_links?: string[];
+  portfolio_images?: string[];
+  skills_list?: string[];
+  tools_list?: string[];
+  expertise_bullets?: string[];
+  additional_skills?: string[];
+  skills_bullets?: string[];
+  role_title?: string;
+  role_description?: string;
 }
 
 export interface ProfileData {
