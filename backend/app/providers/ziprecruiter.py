@@ -32,6 +32,7 @@ from typing import List, Dict, Any
 import httpx
 
 from .jsearch import JSearchProvider, JobData
+from app.config import settings
 
 
 class ZipRecruiterProvider(JSearchProvider):
@@ -105,6 +106,12 @@ class ZipRecruiterProvider(JSearchProvider):
         if not needs_enrich:
             return jobs
 
+        # Quota control: each enrichment is up to 2 extra RapidAPI/HTTP calls, so cap
+        # how many jobs we enrich per search instead of enriching the whole page.
+        if len(needs_enrich) > settings.ZIPRECRUITER_MAX_ENRICH:
+            print(f"[ziprecruiter] Capping enrichment from {len(needs_enrich)} to {settings.ZIPRECRUITER_MAX_ENRICH} jobs (quota control)")
+            needs_enrich = needs_enrich[:settings.ZIPRECRUITER_MAX_ENRICH]
+
         print(f"[ziprecruiter] Enriching {len(needs_enrich)} jobs (missing date/description) via /job-details")
 
         async def enrich(i: int) -> None:
@@ -119,8 +126,9 @@ class ZipRecruiterProvider(JSearchProvider):
                     jobs[i] = jobs[i].model_copy(update=updates)
                     print(f"[ziprecruiter] Enriched '{jobs[i].title}': {list(updates.keys())}")
 
-            # If date still null after /job-details, try scraping JSON-LD from job URL
-            if jobs[i].posted_date is None and (jobs[i].url or "").strip():
+            # If date still null after /job-details, optionally scrape JSON-LD from the
+            # job URL (live HTML fetch — disable via ZIPRECRUITER_SCRAPE_DATES to save quota/time).
+            if settings.ZIPRECRUITER_SCRAPE_DATES and jobs[i].posted_date is None and (jobs[i].url or "").strip():
                 scraped_date = await self._scrape_date_from_url(jobs[i].url)
                 if scraped_date:
                     jobs[i] = jobs[i].model_copy(update={"posted_date": scraped_date})

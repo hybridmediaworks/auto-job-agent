@@ -2,7 +2,7 @@ import { ensureUrl, cleanText, companyBgColor, resolveTools, ToolIconBox, nonEmp
 import type { TemplateProps } from './shared'
 
 export function RidaTemplate({ data, photo }: TemplateProps) {
-  const tools = resolveTools(data.tools_list || []).slice(0, 7)
+  const tools = resolveTools(data.tools_list || []).slice(0, 6)
   const skills: string[] = data.skills_list || []
   const experience: any[] = data.experience || []
   const education: any[] = data.education || []

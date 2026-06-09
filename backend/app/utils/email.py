@@ -28,6 +28,11 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
+def is_email_configured() -> bool:
+    """True when SMTP credentials are present, i.e. verification emails can actually be sent."""
+    return bool(settings.SMTP_USER and settings.SMTP_PASSWORD and (settings.FROM_EMAIL or settings.SMTP_USER))
+
+
 def _send_smtp_sync(to_email: str, subject: str, html_body: str) -> None:
     """
     Synchronous SMTP send — runs in a thread pool so it doesn't block the event loop.
@@ -35,8 +40,9 @@ def _send_smtp_sync(to_email: str, subject: str, html_body: str) -> None:
     """
     from_addr = settings.FROM_EMAIL or settings.SMTP_USER
     if not from_addr or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.warning("SMTP not configured — skipping email to %s", to_email)
-        return
+        # Surface misconfiguration loudly instead of silently dropping the email —
+        # a silent drop is how users get permanently locked out of an unverified account.
+        raise RuntimeError("SMTP is not configured (SMTP_USER / SMTP_PASSWORD missing)")
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -54,12 +60,19 @@ def _send_smtp_sync(to_email: str, subject: str, html_body: str) -> None:
 
 
 async def send_email(to_email: str, subject: str, html_body: str) -> None:
-    """Async wrapper — offloads blocking SMTP call to thread pool."""
+    """
+    Async wrapper — offloads the blocking SMTP call to a thread pool.
+
+    Logs AND re-raises on failure so callers can decide what to do. (Previously this
+    swallowed every error, which is how a misconfigured SMTP server silently locked
+    unverified users out of logging in.)
+    """
     try:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, _send_smtp_sync, to_email, subject, html_body)
     except Exception as exc:
         logger.error("Failed to send email to %s: %s", to_email, exc)
+        raise
 
 
 async def send_verification_email(to_email: str, username: str, token: str) -> None:

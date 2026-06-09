@@ -122,6 +122,7 @@ export default function ManualTailor() {
   const [address, setAddress] = useState<string>(draft?.address ?? '')
   const [tone, setTone] = useState<string>(draft?.tone ?? 'Professional')
   const [focusAreas, setFocusAreas] = useState<string[]>(draft?.focusAreas ?? [])
+  const [customPrompt, setCustomPrompt] = useState<string>(draft?.customPrompt ?? '')
   const [selectedProfileId, setSelectedProfileId] = useState<number | undefined>(draft?.selectedProfileId ?? undefined)
   const [useTemplate, setUseTemplate] = useState<boolean>(draft?.useTemplate ?? false)
   const [selectedTemplate, setSelectedTemplate] = useState<number>(draft?.selectedTemplate ?? 1)
@@ -136,15 +137,15 @@ export default function ManualTailor() {
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         title, company, location, url, description, address,
-        tone, focusAreas, selectedProfileId, useTemplate, selectedTemplate, onePage,
+        tone, focusAreas, customPrompt, selectedProfileId, useTemplate, selectedTemplate, onePage,
       }))
     } catch { /* storage full — silently skip */ }
-  }, [title, company, location, url, description, address, tone, focusAreas, selectedProfileId, useTemplate, selectedTemplate, onePage])
+  }, [title, company, location, url, description, address, tone, focusAreas, customPrompt, selectedProfileId, useTemplate, selectedTemplate, onePage])
 
   function clearForm() {
     setTitle(''); setCompany(''); setLocation(''); setUrl('')
     setDescription(''); setAddress(''); setTone('Professional')
-    setFocusAreas([]); setUseTemplate(false); setSelectedTemplate(1)
+    setFocusAreas([]); setCustomPrompt(''); setUseTemplate(false); setSelectedTemplate(1)
     setOnePage(false)
     setError(null); setSimilarResumes([])
     clearDraft()
@@ -194,6 +195,7 @@ export default function ManualTailor() {
         address: address.trim() || undefined,
         url: url.trim() || undefined,
         profile_id: selectedProfileId,
+        custom_prompt: customPrompt.trim() || undefined,
         template_id: useTemplate ? selectedTemplate : undefined,
         tone,
         focus_areas: focusAreas.length > 0 ? focusAreas : undefined,
@@ -392,6 +394,21 @@ export default function ManualTailor() {
                 </span>
               )}
             </label>
+          </Field>
+
+          {/* Custom prompt — free-form instructions the AI must follow */}
+          <Field label="Refine with Custom Prompt">
+            <textarea
+              value={customPrompt}
+              onChange={e => setCustomPrompt(e.target.value)}
+              placeholder={"Tell the AI exactly what to do, e.g.:\n• Change the latest experience title to Lead PHP Developer\n• Make every experience entry exactly 4 bullets\n• Only 6 tool icons, focus on the JD stack\n• Discard the tools section\n• Show 10 years of experience"}
+              rows={4}
+              className={`${inputClass} resize-y placeholder:leading-relaxed`}
+              style={{ ...inputStyle, minHeight: 96 }}
+            />
+            <p className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
+              These instructions take priority over the defaults, while keeping the template intact.
+            </p>
           </Field>
 
         </Section>

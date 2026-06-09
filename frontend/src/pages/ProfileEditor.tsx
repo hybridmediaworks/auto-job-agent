@@ -471,13 +471,30 @@ export default function ProfileEditor() {
   const [importPreview, setImportPreview] = useState<ResumeData | null>(null)
 
   // Portfolio image state — per-image load status and full-screen preview
-  const [imgStatus, setImgStatus] = useState<Record<number, 'ok' | 'error'>>({})
+  const [imgStatus, setImgStatus] = useState<Record<number, 'checking' | 'ok' | 'error'>>({})
   const [previewSrc, setPreviewSrc] = useState<string | null>(null)
 
-  // Reset per-image status when the image list changes (re-validates on edit)
+  // Validate each non-empty image URL via the browser's native image loader.
+  // Fires onload → status='ok' (URL serves a decodable image AND is reachable).
+  // Fires onerror → status='error' (404, DNS, CORS, non-image content, etc.).
+  // Debounced so we don't probe on every keystroke.
   useEffect(() => {
-    setImgStatus({})
-  }, [(resume as any).portfolio_images?.length])
+    const imgs: string[] = (resume as any).portfolio_images || []
+    const t = setTimeout(() => {
+      const next: Record<number, 'checking' | 'ok' | 'error'> = {}
+      imgs.forEach((src, idx) => {
+        if (!src || !src.trim()) return  // empty → no status (rendered as "No URL provided")
+        if (src.startsWith('data:')) { next[idx] = 'ok'; return }  // uploaded blob, always valid
+        next[idx] = 'checking'
+        const probe = new Image()
+        probe.onload  = () => setImgStatus(s => ({ ...s, [idx]: 'ok' }))
+        probe.onerror = () => setImgStatus(s => ({ ...s, [idx]: 'error' }))
+        probe.src = src
+      })
+      setImgStatus(next)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [JSON.stringify((resume as any).portfolio_images || [])])
 
   // Close preview with ESC
   useEffect(() => {
@@ -1011,50 +1028,74 @@ export default function ProfileEditor() {
                 >+ URL</button>
               </div>
             </div>
-            {(resume.portfolio_images || []).length > 0 && (
-              <div className="grid grid-cols-2 gap-2">
-                {(resume.portfolio_images || []).slice(0, 4).map((img: string, idx: number) => {
-                  const failed = imgStatus[idx] === 'error'
-                  const isEmpty = !img || !img.trim()
-                  return (
-                    <div key={idx} className="relative group">
-                      {failed || isEmpty ? (
-                        <div className="w-full h-24 rounded flex flex-col items-center justify-center text-center px-2"
-                             style={{ background: 'rgba(239,68,68,0.08)', border: '1px dashed rgba(239,68,68,0.35)' }}>
-                          <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#fca5a5' }}>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z" />
-                          </svg>
-                          <span className="text-[10px] font-medium leading-tight" style={{ color: '#fca5a5' }}>
-                            {isEmpty ? 'No URL provided' : 'Image not accessible'}
-                          </span>
-                        </div>
-                      ) : (
+            {(() => {
+              const imgs = (resume.portfolio_images || []).slice(0, 4)
+              const count = imgs.length
+              if (count === 0) return null
+              // Same balanced layout as PortfolioGrid in templates:
+              //  1 → full width 16:9
+              //  2 → 2 cols 4:3
+              //  3 → first spans both cols 16:9, two below 4:3
+              //  4 → 2x2 4:3
+              const cols = count === 1 ? 1 : 2
+              const cellAspect = count === 1 ? '16 / 9' : '4 / 3'
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 8 }}>
+                  {imgs.map((img: string, idx: number) => {
+                    const status = imgStatus[idx]
+                    const failed = status === 'error'
+                    const isEmpty = !img || !img.trim()
+                    const span2 = count === 3 && idx === 0
+                    const aspect = span2 ? '16 / 9' : cellAspect
+                    return (
+                      <div
+                        key={idx}
+                        className="relative group"
+                        style={{
+                          gridColumn: span2 ? 'span 2' : 'span 1',
+                          width: '100%',
+                          aspectRatio: aspect,
+                        }}
+                      >
+                        {failed || isEmpty ? (
+                          <div className="w-full h-full rounded flex flex-col items-center justify-center text-center px-2"
+                               style={{ background: 'rgba(239,68,68,0.08)', border: '1px dashed rgba(239,68,68,0.35)' }}>
+                            <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#fca5a5' }}>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z" />
+                            </svg>
+                            <span className="text-[10px] font-medium leading-tight" style={{ color: '#fca5a5' }}>
+                              {isEmpty ? 'No URL provided' : 'Image not accessible'}
+                            </span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewSrc(img)}
+                            className="w-full h-full rounded overflow-hidden block cursor-zoom-in"
+                            style={{ padding: 0, border: 'none', background: 'rgba(255,255,255,0.04)' }}
+                            title="Click to preview full-size"
+                          >
+                            <img
+                              src={img}
+                              alt=""
+                              className="w-full h-full"
+                              style={{ objectFit: 'cover', display: 'block' }}
+                              onLoad={() => setImgStatus(s => ({ ...s, [idx]: 'ok' }))}
+                              onError={() => setImgStatus(s => ({ ...s, [idx]: 'error' }))}
+                            />
+                          </button>
+                        )}
                         <button
-                          type="button"
-                          onClick={() => setPreviewSrc(img)}
-                          className="w-full h-24 rounded overflow-hidden block cursor-zoom-in"
-                          style={{ padding: 0, border: 'none', background: 'rgba(255,255,255,0.04)' }}
-                          title="Click to preview full-size"
-                        >
-                          <img
-                            src={img}
-                            alt=""
-                            className="w-full h-full object-cover"
-                            onLoad={() => setImgStatus(s => ({ ...s, [idx]: 'ok' }))}
-                            onError={() => setImgStatus(s => ({ ...s, [idx]: 'error' }))}
-                          />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })}
-                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Remove image"
-                      >✕</button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                          onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })}
+                          className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Remove image"
+                        >✕</button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
             {(resume.portfolio_images || []).some((img: string) => !img.startsWith('data:')) && (
               <div className="space-y-2">
                 {(resume.portfolio_images || []).map((img: string, idx: number) => !img.startsWith('data:') && (
@@ -1070,12 +1111,26 @@ export default function ProfileEditor() {
                       />
                       <button onClick={() => setResume({ ...resume, portfolio_images: (resume.portfolio_images || []).filter((_: string, i: number) => i !== idx) })} className="text-red-400 hover:text-red-300 text-sm flex-shrink-0">✕</button>
                     </div>
+                    {img.trim() && imgStatus[idx] === 'checking' && (
+                      <p className="text-xs flex items-center gap-1.5" style={{ color: '#9ca3af' }}>
+                        <span className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin flex-shrink-0" style={{ borderColor: '#9ca3af', borderTopColor: 'transparent' }} />
+                        Checking URL…
+                      </p>
+                    )}
+                    {img.trim() && imgStatus[idx] === 'ok' && (
+                      <p className="text-xs flex items-center gap-1.5" style={{ color: '#7DC242' }}>
+                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Valid image, accessible
+                      </p>
+                    )}
                     {img.trim() && imgStatus[idx] === 'error' && (
                       <p className="text-xs flex items-center gap-1.5" style={{ color: '#fca5a5' }}>
                         <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Image URL is not accessible — check the link or hosting permissions.
+                        URL is not a direct image or not accessible — paste a link that ends with .jpg / .png / .webp.
                       </p>
                     )}
                   </div>

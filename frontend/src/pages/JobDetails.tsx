@@ -6,6 +6,7 @@ import { jobsApi, profilesApi, tailorApi } from '@/services/api'
 import type { TailoredApplication } from '@/types'
 import { PIPELINE_STAGES, TERMINAL_STATUSES } from '@/types'
 import { CustomSelect } from '@/components/CustomSelect'
+import { detectOnePageConflict } from '@/utils/prompt-warnings'
 import {
   RESUME_TEMPLATES,
   WaleedTemplate,
@@ -601,12 +602,23 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
             Custom Instructions {showCustomPrompt ? '(enabled)' : ''}
           </button>
-          {showCustomPrompt && (
-            <div className="space-y-1.5">
-              <textarea value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} placeholder={"Add special instructions for the AI, e.g.:\n• Emphasize my WordPress experience\n• Use a more formal tone in the cover letter\n• Highlight my leadership experience\n• Focus on cloud/DevOps skills"} className="w-full text-sm border rounded-xl p-3 resize-y placeholder:leading-relaxed" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-default)', color: 'var(--text-input)', minHeight: '90px' }} rows={4} />
-              <p className="text-xs" style={{ color: 'var(--text-faint)' }}>These instructions will be appended to both the resume and cover letter generation prompts.</p>
-            </div>
-          )}
+          {showCustomPrompt && (() => {
+            const conflict = detectOnePageConflict(customPrompt, onePage)
+            return (
+              <div className="space-y-1.5">
+                <textarea value={customPrompt} onChange={e => setCustomPrompt(e.target.value)} placeholder={"Add special instructions for the AI, e.g.:\n• Make ABC company bullets 3 instead of 5\n• Emphasize my WordPress experience\n• Use a more formal tone in the cover letter\n• Focus on cloud/DevOps skills"} className="w-full text-sm border rounded-xl p-3 resize-y placeholder:leading-relaxed" style={{ background: 'var(--bg-input)', borderColor: 'var(--border-default)', color: 'var(--text-input)', minHeight: '90px' }} rows={4} />
+                {conflict && (
+                  <div className="rounded-lg p-2.5 text-xs flex items-start gap-2 border" style={{ background: 'rgba(234,179,8,0.08)', borderColor: 'rgba(234,179,8,0.25)', color: '#fde047' }}>
+                    <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    </svg>
+                    <span>{conflict.message}</span>
+                  </div>
+                )}
+                <p className="text-xs" style={{ color: 'var(--text-faint)' }}>These instructions will be appended to both the resume and cover letter generation prompts.</p>
+              </div>
+            )
+          })()}
         </div>
 
         {/* 1-page toggle */}

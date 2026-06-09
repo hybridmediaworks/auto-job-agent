@@ -12,6 +12,7 @@ Security decisions:
     with a 24-hour expiry stored in the database
 """
 
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
@@ -41,7 +42,9 @@ from app.utils.auth import (
     verify_password,
 )
 from app.utils.dependencies import get_current_user
-from app.utils.email import send_verification_email, send_password_reset_email
+from app.utils.email import send_verification_email, send_password_reset_email, is_email_configured
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -161,7 +164,6 @@ async def get_current_user_info(
 async def register(
     request: Request,
     payload: RegisterRequest,
-    background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
 ):
     """
@@ -203,13 +205,47 @@ async def register(
     db.commit()
     db.refresh(user)
 
-    # Fire verification email asynchronously — doesn't block the response
-    background_tasks.add_task(
-        send_verification_email,
-        to_email=user.email,
-        username=user.username,
-        token=token,
-    )
+    # If SMTP isn't configured, sending a verification email is impossible — and
+    # since login requires email_verified, the user would be permanently locked out.
+    if not is_email_configured():
+        if settings.ENVIRONMENT == "production":
+            # In production, missing SMTP is an operator error. Auto-verifying here
+            # would silently turn OFF email verification for everyone — an open
+            # registration bypass. Fail loud instead and remove the half-created
+            # account so a retry (after SMTP is fixed) can reuse the username/email.
+            logger.error("SMTP not configured in production — blocking registration for '%s'", user.username)
+            db.delete(user)
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Email service is unavailable, so new registrations are temporarily disabled. Please try again later.",
+            )
+        # Non-production (dev/self-host): auto-verify so the app is usable without SMTP.
+        user.email_verified = True
+        user.email_verification_token = None
+        user.email_verification_expires = None
+        db.commit()
+        logger.warning(
+            "SMTP not configured — auto-verifying '%s' without email confirmation (non-production)", user.username
+        )
+        return RegisterResponse(
+            message="Account created! Email verification is disabled on this server, so you can log in now.",
+            username=user.username,
+        )
+
+    # SMTP IS configured: send inline (not fire-and-forget) so a send failure is
+    # surfaced to the user instead of silently leaving them unable to log in.
+    try:
+        await send_verification_email(to_email=user.email, username=user.username, token=token)
+    except Exception:
+        logger.exception("Verification email failed to send for '%s'", user.username)
+        return RegisterResponse(
+            message=(
+                "Account created, but the verification email could not be sent. "
+                "Use 'Resend verification email' on the login page, or contact support."
+            ),
+            username=user.username,
+        )
 
     return RegisterResponse(
         message="Account created! Please check your email to verify your address before logging in.",

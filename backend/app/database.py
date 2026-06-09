@@ -7,7 +7,7 @@ Integrates with existing SQLite database from the CLI application.
 import os
 from pathlib import Path
 from typing import Generator
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker, Session
 
 from app.config import settings
@@ -34,6 +34,18 @@ engine = create_engine(
     connect_args={"check_same_thread": False, "timeout": 30},  # Needed for SQLite
     echo=settings.DEBUG  # Log SQL queries in debug mode
 )
+
+# SQLite does NOT enforce foreign keys unless PRAGMA foreign_keys=ON is issued on
+# EVERY connection. Without it, the ON DELETE CASCADE / SET NULL clauses on our
+# tables never fire and deletes silently orphan child rows (e.g. tailored_applications
+# left behind after a job is deleted). Register a connect-time listener so the pragma
+# is applied to every pooled connection (including APScheduler's job store).
+if engine.dialect.name == "sqlite":
+    @event.listens_for(engine, "connect")
+    def _enable_sqlite_foreign_keys(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 # Enable WAL mode for better concurrent read/write performance on live
 with engine.connect() as conn:
@@ -108,6 +120,37 @@ def init_db() -> None:
                 # Anything else is a real problem and should be visible in logs.
                 if "duplicate column" not in msg and "already exists" not in msg:
                     print(f"[db migration] WARNING: migration failed — {migration}: {e}")
+
+    # De-duplicate tailored_applications, then enforce one row per (job_id, profile_id).
+    # The table historically had no unique constraint, so duplicate generations could
+    # accumulate. Keep the most recent row (highest id) for each pair, then add a unique
+    # index — the SQLite-friendly way to apply uniqueness to an existing table.
+    with engine.connect() as conn:
+        try:
+            conn.execute(text(
+                "DELETE FROM tailored_applications WHERE id NOT IN "
+                "(SELECT MAX(id) FROM tailored_applications GROUP BY job_id, profile_id)"
+            ))
+            # Only add the unique index if the pair isn't already enforced. A fresh DB
+            # built from the model already has an auto-index for the UniqueConstraint,
+            # so creating another would be redundant (doubled write cost). The live DB
+            # has none, so this creates exactly one.
+            already_unique = False
+            for idx in conn.execute(text("PRAGMA index_list('tailored_applications')")).fetchall():
+                if idx[2] != 1:  # column 2 = "unique" flag
+                    continue
+                cols = [r[2] for r in conn.execute(text(f"PRAGMA index_info('{idx[1]}')")).fetchall()]
+                if cols == ["job_id", "profile_id"]:
+                    already_unique = True
+                    break
+            if not already_unique:
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX uq_tailored_job_profile "
+                    "ON tailored_applications (job_id, profile_id)"
+                ))
+            conn.commit()
+        except Exception as e:
+            print(f"[db migration] WARNING: tailored_applications dedup/unique index failed: {e}")
 
     # Reset stuck distributed-lock flags from any previous crash
     with engine.connect() as conn:

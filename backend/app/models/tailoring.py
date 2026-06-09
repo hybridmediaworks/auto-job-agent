@@ -8,7 +8,7 @@ Results are saved so refreshing the job detail page restores the last generation
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, JSON, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, JSON, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -18,6 +18,10 @@ class TailoredApplication(Base):
     """AI-generated tailored resume + cover letter for a specific job."""
 
     __tablename__ = "tailored_applications"
+    __table_args__ = (
+        # One tailored result per job+profile pair — upserts replace, never duplicate.
+        UniqueConstraint("job_id", "profile_id", name="uq_tailored_job_profile"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 

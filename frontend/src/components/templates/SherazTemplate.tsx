@@ -7,7 +7,7 @@ export function SherazTemplate({ data, photo: _photo }: TemplateProps) {
   const education: any[] = data.education || []
   const expertiseBullets: string[] = data.expertise_bullets || []
   const additionalSkills: string[] = data.additional_skills || []
-  const toolsWorkflow: string[] = data.tools_list || []
+  const toolsWorkflow: string[] = (data.tools_list || []).slice(0, 6)
 
   const MP = 'Montserrat, Poppins, Arial, sans-serif'
   const IO = 'Inter, Open Sans, Arial, sans-serif'

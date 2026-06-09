@@ -13,7 +13,7 @@ export function WaqarTemplate({ data, photo }: TemplateProps) {
     || (data.skills && typeof data.skills === 'object' && !Array.isArray(data.skills)
         ? Object.values(data.skills as Record<string, string[]>).flat()
         : [])
-  const tools: string[] = data.tools_list || []
+  const tools: string[] = (data.tools_list || []).slice(0, 6)
   const experience: any[] = data.experience || []
   const education: any[] = data.education || []
   const keyAchievements: string[] = data.key_achievements || []

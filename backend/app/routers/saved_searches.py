@@ -223,7 +223,16 @@ async def delete_saved_search(
     search = db.query(SavedSearch).filter(SavedSearch.id == search_id, SavedSearch.user_id == current_user.id).first()
     if not search:
         raise HTTPException(status_code=404, detail="Saved search not found")
-    db.delete(search)
+
+    # The live jobs.saved_search_id FK is NO ACTION (not SET NULL), so with
+    # foreign-key enforcement enabled a bare delete would fail while jobs still
+    # reference this search. Detach those jobs first to emulate ON DELETE SET NULL.
+    from app.models.job import Job
+    db.query(Job).filter(Job.saved_search_id == search_id).update(
+        {Job.saved_search_id: None}, synchronize_session=False
+    )
+
+    db.delete(search)  # saved_search_runs cascade-delete via their ON DELETE CASCADE FK
     db.commit()
 
     await sync_scheduler()

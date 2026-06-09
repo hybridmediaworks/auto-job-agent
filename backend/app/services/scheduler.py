@@ -24,11 +24,12 @@ from datetime import datetime, timezone
 from typing import Optional, Tuple, List
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-from app.database import SessionLocal
+from app.database import SessionLocal, engine
 from app.models.job import Job, ApplicationStatus
 from app.models.saved_search import SavedSearch
 from app.models.saved_search_run import SavedSearchRun
@@ -204,6 +205,7 @@ async def run_saved_search(search_id: int, force: bool = False) -> dict:
     """
     db: Session = SessionLocal()
     run_record: Optional[SavedSearchRun] = None
+    lock_acquired = False  # whether we claimed is_running and therefore must release it
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     try:
@@ -228,6 +230,7 @@ async def run_saved_search(search_id: int, force: bool = False) -> dict:
         if result.rowcount == 0:
             print(f"[scheduler] SavedSearch {search_id} already running, skipping")
             return {"new_jobs": 0, "total_fetched": 0}
+        lock_acquired = True
 
         # Create run record
         run_record = SavedSearchRun(
@@ -404,6 +407,18 @@ async def run_saved_search(search_id: int, force: bool = False) -> dict:
                 pass
         return {"new_jobs": 0, "total_fetched": 0}
     finally:
+        # Always release the distributed lock if we acquired it — the early-return
+        # branches (missing RAPIDAPI_KEY / no providers) used to leave is_running=1,
+        # permanently blocking the search.
+        if lock_acquired:
+            try:
+                db.execute(text("UPDATE saved_searches SET is_running=0 WHERE id=:id"), {"id": search_id})
+                db.commit()
+            except Exception:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
         db.close()
 
 
@@ -438,7 +453,9 @@ async def sync_scheduler():
                     id=job_id,
                     replace_existing=True,
                     max_instances=1,
-                    misfire_grace_time=300,
+                    # Match the scheduler-wide intent (1h): a run missed during a
+                    # restart is caught up (coalesced) rather than silently skipped.
+                    misfire_grace_time=3600,
                 )
                 print(f"[scheduler] Scheduled saved search '{search.name}' every {search.interval_hours}h")
             else:
@@ -470,7 +487,18 @@ async def sync_scheduler():
 def start_scheduler():
     """Call from FastAPI startup_event()."""
     global _scheduler
-    _scheduler = AsyncIOScheduler()
+
+    # Persist scheduled jobs in the same SQLite DB so they survive a restart instead
+    # of being rebuilt from scratch (which reset every search's interval clock on each
+    # boot). job_defaults make a missed run after downtime fire once on startup
+    # (coalesce) rather than being silently skipped, up to misfire_grace_time late.
+    jobstores = {"default": SQLAlchemyJobStore(engine=engine)}
+    job_defaults = {
+        "coalesce": True,
+        "max_instances": 1,
+        "misfire_grace_time": 3600,  # run a search up to 1h late so restarts catch up
+    }
+    _scheduler = AsyncIOScheduler(jobstores=jobstores, job_defaults=job_defaults)
 
     _scheduler.add_job(
         sync_scheduler,
@@ -482,7 +510,7 @@ def start_scheduler():
     )
 
     _scheduler.start()
-    print("[scheduler] Started. Sync runs every 5 minutes.")
+    print("[scheduler] Started (persistent SQLAlchemy jobstore). Sync runs every 5 minutes.")
 
 
 def stop_scheduler():

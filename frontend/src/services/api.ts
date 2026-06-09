@@ -421,6 +421,7 @@ export const tailorApi = {
     address?: string;
     url?: string;
     profile_id?: number;
+    custom_prompt?: string;
     template_id?: number;
     tone?: string;
     focus_areas?: string[];

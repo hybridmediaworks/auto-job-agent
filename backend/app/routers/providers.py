@@ -155,7 +155,7 @@ async def _fetch_indeed_jsearch_fallback(
             query=keyword,
             location=location,
             remote_only=remote_only,
-            limit=limit * 4,  # fetch more raw — "via indeed" index has high no_desc drop rate
+            limit=limit * settings.PROVIDER_RAW_FETCH_MULTIPLIER,  # "via indeed" index has a high no_desc drop rate
             locality=locality,
             **date_kwargs,
         )
@@ -222,9 +222,10 @@ async def _fetch_single(
 
     date_kwargs = build_date_kwargs(provider_name, max_age_days)
 
-    # ZipRecruiter via JSearch has a high drop rate (too_old, no_desc) —
-    # fetch 4x more raw jobs so survivors after filtering meet the user's limit.
-    raw_limit = limit * 4 if provider_name == "ziprecruiter" else limit
+    # ZipRecruiter via JSearch has a high drop rate (too_old, no_desc) — fetch a
+    # multiple of the raw jobs so survivors after filtering meet the user's limit.
+    # Multiplier is configurable (PROVIDER_RAW_FETCH_MULTIPLIER) for quota control.
+    raw_limit = limit * settings.PROVIDER_RAW_FETCH_MULTIPLIER if provider_name == "ziprecruiter" else limit
 
     all_jobs = []
     offset = 0

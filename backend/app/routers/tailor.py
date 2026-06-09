@@ -14,6 +14,7 @@ from typing import List, Optional, Set
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -66,6 +67,53 @@ class TailoredApplicationOut(BaseModel):
     template_id: Optional[int] = None
     created_at: str
     updated_at: str
+
+
+def _upsert_tailored_application(
+    db: Session, job_id: int, profile_id: int, fields: dict
+) -> TailoredApplication:
+    """
+    Insert or update the single TailoredApplication for (job_id, profile_id).
+
+    Tolerant of the uq_tailored_job_profile unique index under concurrency: if a
+    racing request (or a double-click) inserts first, the IntegrityError is caught
+    and we fall back to updating the existing row instead of 500-ing the user.
+    """
+    existing = (
+        db.query(TailoredApplication)
+        .filter(
+            TailoredApplication.job_id == job_id,
+            TailoredApplication.profile_id == profile_id,
+        )
+        .first()
+    )
+
+    if existing is None:
+        ta = TailoredApplication(job_id=job_id, profile_id=profile_id, **fields)
+        db.add(ta)
+        try:
+            db.commit()
+            db.refresh(ta)
+            return ta
+        except IntegrityError:
+            # Lost the insert race — re-fetch the winner and update it below.
+            db.rollback()
+            existing = (
+                db.query(TailoredApplication)
+                .filter(
+                    TailoredApplication.job_id == job_id,
+                    TailoredApplication.profile_id == profile_id,
+                )
+                .first()
+            )
+            if existing is None:
+                raise
+
+    for key, value in fields.items():
+        setattr(existing, key, value)
+    db.commit()
+    db.refresh(existing)
+    return existing
 
 
 def _serialize(ta: TailoredApplication, profile_name: str) -> TailoredApplicationOut:
@@ -187,42 +235,16 @@ async def tailor_job(
             updated_at=now,
         )
 
-    # ── Upsert result in DB ───────────────────────────────────────────────────
-    existing = (
-        db.query(TailoredApplication)
-        .filter(
-            TailoredApplication.job_id == job_id,
-            TailoredApplication.profile_id == profile.id,
-        )
-        .first()
-    )
-
-    if existing:
-        existing.tailored_resume_text  = result["tailored_resume_text"]
-        existing.cover_letter          = result["cover_letter"]
-        existing.fit_score             = result["fit_score"]
-        existing.keywords_matched      = result["keywords_matched"]
-        existing.keywords_missing      = result["keywords_missing"]
-        existing.tailored_resume_data  = result["tailored_resume_data"]
-        existing.template_id           = body.template_id
-        db.commit()
-        db.refresh(existing)
-        ta = existing
-    else:
-        ta = TailoredApplication(
-            job_id=job_id,
-            profile_id=profile.id,
-            tailored_resume_text  = result["tailored_resume_text"],
-            cover_letter          = result["cover_letter"],
-            fit_score             = result["fit_score"],
-            keywords_matched      = result["keywords_matched"],
-            keywords_missing      = result["keywords_missing"],
-            tailored_resume_data  = result["tailored_resume_data"],
-            template_id           = body.template_id,
-        )
-        db.add(ta)
-        db.commit()
-        db.refresh(ta)
+    # ── Upsert result in DB (race-tolerant against uq_tailored_job_profile) ────
+    ta = _upsert_tailored_application(db, job_id, profile.id, {
+        "tailored_resume_text": result["tailored_resume_text"],
+        "cover_letter":         result["cover_letter"],
+        "fit_score":            result["fit_score"],
+        "keywords_matched":     result["keywords_matched"],
+        "keywords_missing":     result["keywords_missing"],
+        "tailored_resume_data": result["tailored_resume_data"],
+        "template_id":          body.template_id,
+    })
 
     return _serialize(ta, profile.name)
 
@@ -243,41 +265,15 @@ def save_tailoring(
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    existing = (
-        db.query(TailoredApplication)
-        .filter(
-            TailoredApplication.job_id == job_id,
-            TailoredApplication.profile_id == body.profile_id,
-        )
-        .first()
-    )
-
-    if existing:
-        existing.tailored_resume_text = body.tailored_resume_text
-        existing.cover_letter         = body.cover_letter
-        existing.fit_score            = body.fit_score
-        existing.keywords_matched     = body.keywords_matched
-        existing.keywords_missing     = body.keywords_missing
-        existing.tailored_resume_data = body.tailored_resume_data
-        existing.template_id          = body.template_id
-        db.commit()
-        db.refresh(existing)
-        ta = existing
-    else:
-        ta = TailoredApplication(
-            job_id=job_id,
-            profile_id=body.profile_id,
-            tailored_resume_text=body.tailored_resume_text,
-            cover_letter=body.cover_letter,
-            fit_score=body.fit_score,
-            keywords_matched=body.keywords_matched,
-            keywords_missing=body.keywords_missing,
-            tailored_resume_data=body.tailored_resume_data,
-            template_id=body.template_id,
-        )
-        db.add(ta)
-        db.commit()
-        db.refresh(ta)
+    ta = _upsert_tailored_application(db, job_id, body.profile_id, {
+        "tailored_resume_text": body.tailored_resume_text,
+        "cover_letter":         body.cover_letter,
+        "fit_score":            body.fit_score,
+        "keywords_matched":     body.keywords_matched,
+        "keywords_missing":     body.keywords_missing,
+        "tailored_resume_data": body.tailored_resume_data,
+        "template_id":          body.template_id,
+    })
 
     return _serialize(ta, profile.name)
 
@@ -492,6 +488,7 @@ class ManualTailorRequest(BaseModel):
     address: Optional[str] = None
     url: Optional[str] = None
     profile_id: Optional[int] = None
+    custom_prompt: Optional[str] = None   # free-form refinement instructions for the AI
     template_id: Optional[int] = None
     tone: Optional[str] = None
     focus_areas: Optional[List[str]] = None
@@ -558,6 +555,7 @@ async def manual_tailor(
             profile_resume_data=profile.resume_data,
             profile_data=profile.profile_data,
             anthropic_api_key=anthropic_key,
+            custom_prompt=body.custom_prompt,
             template_id=body.template_id,
             one_page=body.one_page,
             tone=body.tone,

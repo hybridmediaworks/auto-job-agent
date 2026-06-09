@@ -49,4 +49,18 @@ desktop.ini
 PROGRESS.md
 CLAUDE.md
 SESSION_NOTES.md
+DEBUGGING_LOG.md
+repo-map.md
+new_test_file
 .claude/
+
+# ── Tests / dev scratch (not shipped to repo) ─────────────────────────────────
+backend/app/tests/
+.pytest_cache/
+**/.pytest_cache/
+
+# ── Build / cache artifacts ───────────────────────────────────────────────────
+.vite/
+**/.vite/
+*.tsbuildinfo
+frontend/dist/

@@ -2,7 +2,7 @@ import { ensureUrl, cleanText, resolveTools, ToolIconBox, PortfolioGrid, nonEmpt
 import type { TemplateProps } from './shared'
 
 export function AdeelTemplate({ data, photo: _photo }: TemplateProps) {
-  const tools = resolveTools(nonEmpty(data.tools_list)).slice(0, 8)
+  const tools = resolveTools(nonEmpty(data.tools_list)).slice(0, 6)
   const skills: string[] = nonEmpty(data.skills_list)
   const experience: any[] = data.experience || []
   const education: any[] = data.education || []
