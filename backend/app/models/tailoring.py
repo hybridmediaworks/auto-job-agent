@@ -8,7 +8,7 @@ Results are saved so refreshing the job detail page restores the last generation
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, JSON, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -48,6 +48,9 @@ class TailoredApplication(Base):
 
     # Which resume template was used (1=Classic, 2=Two-Column, 3=Creative)
     template_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # Whether this was generated in strict one-page mode (drives PDF auto-fit + compact render)
+    one_page: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False

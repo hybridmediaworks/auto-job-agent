@@ -25,7 +25,7 @@ export function WaleedV2Template({ data, photo }: TemplateProps) {
   )
 
   return (
-    <div style={{ width: 794, minHeight: 1123, fontFamily: OS, background: '#ffffff', boxSizing: 'border-box' as const }}>
+    <div style={{ width: 794, minHeight: 1085, fontFamily: OS, background: '#ffffff', boxSizing: 'border-box' as const }}>
 
       {/* ── Solid Green Header Banner ──────────────────────────────── */}
       <div style={{ background: GREEN, padding: '30px 44px 26px 44px' }}>

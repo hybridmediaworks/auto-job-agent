@@ -7,6 +7,7 @@ import type { TailoredApplication } from '@/types'
 import { PIPELINE_STAGES, TERMINAL_STATUSES } from '@/types'
 import { CustomSelect } from '@/components/CustomSelect'
 import { detectOnePageConflict } from '@/utils/prompt-warnings'
+import { onePageFitScript } from '@/utils/onePageFit'
 import {
   RESUME_TEMPLATES,
   WaleedTemplate,
@@ -247,6 +248,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
     const safeName = ((displayResult.tailored_resume_data?.name as string) || 'Resume').replace(/\s+/g, '_')
     const safeJob = jobTitle.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').slice(0, 40)
     const html = ref.current.outerHTML
+    const fitScript = onePageFitScript(!!displayResult.one_page)
     const printWindow = window.open('', '_blank', 'width=900,height=700')
     if (!printWindow) {
       setDownloadError('Popup was blocked. Please allow popups for this site and try again.')
@@ -268,8 +270,8 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
   </style>
 </head>
 <body>
-  ${html}
-  <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 800); };<\/script>
+  <div id="__fit" style="transform-origin:top left">${html}</div>
+  <script>window.onload = function(){ setTimeout(function(){ ${fitScript}window.print(); }, 800); };<\/script>
 </body>
 </html>`)
     printWindow.document.close()
@@ -625,7 +627,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input type="checkbox" checked={onePage} onChange={e => setOnePage(e.target.checked)} className="rounded" style={{ accentColor: '#7DC242' }} />
           <span className="text-sm font-medium" style={{ color: onePage ? '#7DC242' : 'var(--text-muted)' }}>1-Page Resume</span>
-          {onePage && <span className="text-xs" style={{ color: '#6b7280' }}>— 2 roles · 3 bullets max · 2-sentence summary</span>}
+          {onePage && <span className="text-xs" style={{ color: '#6b7280' }}>— all roles kept · bullets trimmed · ≤6 skills/tools · fits one page</span>}
         </label>
 
         {/* Tone */}

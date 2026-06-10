@@ -51,6 +51,7 @@ class TailorSaveRequest(BaseModel):
     keywords_matched: Optional[List[str]] = None
     keywords_missing: Optional[List[str]] = None
     template_id: Optional[int] = None
+    one_page: Optional[bool] = None
 
 
 class TailoredApplicationOut(BaseModel):
@@ -65,6 +66,7 @@ class TailoredApplicationOut(BaseModel):
     keywords_matched: Optional[List[str]]
     keywords_missing: Optional[List[str]]
     template_id: Optional[int] = None
+    one_page: bool = False
     created_at: str
     updated_at: str
 
@@ -129,6 +131,7 @@ def _serialize(ta: TailoredApplication, profile_name: str) -> TailoredApplicatio
         keywords_matched=ta.keywords_matched or [],
         keywords_missing=ta.keywords_missing or [],
         template_id=ta.template_id,
+        one_page=bool(ta.one_page),
         created_at=ta.created_at.isoformat(),
         updated_at=ta.updated_at.isoformat(),
     )
@@ -231,6 +234,7 @@ async def tailor_job(
             keywords_matched=result["keywords_matched"],
             keywords_missing=result["keywords_missing"],
             template_id=body.template_id,
+            one_page=body.one_page,
             created_at=now,
             updated_at=now,
         )
@@ -244,6 +248,7 @@ async def tailor_job(
         "keywords_missing":     result["keywords_missing"],
         "tailored_resume_data": result["tailored_resume_data"],
         "template_id":          body.template_id,
+        "one_page":             body.one_page,
     })
 
     return _serialize(ta, profile.name)
@@ -273,6 +278,7 @@ def save_tailoring(
         "keywords_missing":     body.keywords_missing,
         "tailored_resume_data": body.tailored_resume_data,
         "template_id":          body.template_id,
+        "one_page":             bool(body.one_page),
     })
 
     return _serialize(ta, profile.name)
@@ -325,6 +331,7 @@ class ApplicationHistoryItem(BaseModel):
     tailored_at: str
     fit_score: Optional[float]
     template_id: Optional[int]
+    one_page: bool = False
     keywords_matched: List[str]
 
 
@@ -372,6 +379,7 @@ def get_application_history(
             tailored_at=ta.updated_at.isoformat(),
             fit_score=ta.fit_score,
             template_id=ta.template_id,
+            one_page=bool(ta.one_page),
             keywords_matched=ta.keywords_matched or [],
         )
         for ta, job, profile in rows
@@ -592,6 +600,7 @@ async def manual_tailor(
             keywords_matched=result["keywords_matched"],
             keywords_missing=result["keywords_missing"],
             template_id=body.template_id,
+            one_page=body.one_page,
         )
         db.add(ta)
         db.commit()

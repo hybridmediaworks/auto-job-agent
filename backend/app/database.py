@@ -89,6 +89,7 @@ def init_db() -> None:
     # Safe column migrations for existing databases (create_all won't add new columns)
     _safe_migrations = [
         "ALTER TABLE tailored_applications ADD COLUMN template_id INTEGER",
+        "ALTER TABLE tailored_applications ADD COLUMN one_page BOOLEAN NOT NULL DEFAULT 0",
         "ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT 0",
         "ALTER TABLE users ADD COLUMN email_verification_token VARCHAR(64)",
         "ALTER TABLE users ADD COLUMN email_verification_expires DATETIME",

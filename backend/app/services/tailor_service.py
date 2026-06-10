@@ -214,7 +214,7 @@ IMPORTANT for tailored_experience:
 - COVER GENUINE JD TECH: For every technology, framework, and tool named in the JD that the candidate genuinely has (or has closely transferable) experience with, make it appear by exact name in at least one bullet across the experience entries. Do NOT force-fit technologies the candidate has never used and has no adjacent experience for — those belong in keywords_missing, not in the bullets.
 - USE THE EMPLOYER'S VOCABULARY for real experience: when the candidate's genuine work maps to a JD technology, describe it using the JD's exact terminology rather than a synonym (e.g. if the JD says React.js and the candidate has real component-based JavaScript/React work, write "React.js component-based development", not "React-style").
 - NO DECEPTIVE HEDGING, NO INVENTION: do not pad bullets with vague "compatible with" / "inspired by" filler, and equally do not assert hands-on use of a named framework the candidate has never touched. State real and transferable experience directly and confidently; omit what is not real.
-- DISTRIBUTE across ALL roles: Do not pile every keyword into the most recent role. Spread genuinely-held skills across the roles where they actually applied.
+- CONCENTRATE JD TECH IN THE 2 MOST RECENT ROLES (see the Recency Weighting section below): the two most recent roles should carry the bulk of the JD's required stack and keywords. Older roles keep their original focus and only mention JD tech that genuinely applied there.
 - Generate 4 to 6 bullets per role BY DEFAULT, unless the candidate's custom instructions specify a different number (then use exactly that number).
 - DO NOT invent projects, employers, or technologies. Reframe and reinterpret EXISTING work to highlight what the employer needs.
 - If a specific metric is unknown, use a compelling generic phrase. Examples: "across multiple client projects", "for several production environments", "significantly reducing manual effort", "improving delivery speed across concurrent builds". Never leave brackets like [X] or [Y] in the output.
@@ -479,7 +479,8 @@ def _resume_to_text(data: dict) -> str:
 
 
 def _build_tailored_resume_data(
-    original: dict, claude_result: dict, allow_section_clearing: bool = False
+    original: dict, claude_result: dict, allow_section_clearing: bool = False,
+    one_page: bool = False,
 ) -> dict:
     """
     Merge Claude's tailored content into the resume structure.
@@ -491,6 +492,9 @@ def _build_tailored_resume_data(
     empty list from Claude (e.g. "tools_list": []) clears that section, so directives
     like "discard the tools section" take effect. When False, empty lists are ignored
     and the original section is preserved (avoids accidentally wiping a section).
+
+    one_page: when True, hard-trim to fit one page while KEEPING ALL experiences —
+    recent 2 roles ≤3 bullets, older roles ≤2, skills ≤6, tools ≤6, summary ≤2 sentences.
     """
     tailored = copy.deepcopy(original)
 
@@ -570,6 +574,18 @@ def _build_tailored_resume_data(
         new_title = (entry.get("title") or "").strip()
         if new_title:
             exp["title"] = new_title
+
+    # ── Strict one-page caps: KEEP every experience, just trim each one ───────
+    if one_page:
+        for idx, exp in enumerate(tailored.get("experience", [])):
+            if isinstance(exp.get("bullets"), list):
+                exp["bullets"] = exp["bullets"][: (3 if idx < 2 else 2)]
+        if isinstance(tailored.get("skills_list"), list):
+            tailored["skills_list"] = tailored["skills_list"][:6]
+        if isinstance(tailored.get("tools_list"), list):
+            tailored["tools_list"] = tailored["tools_list"][:6]
+        if isinstance(tailored.get("summary"), str):
+            tailored["summary"] = _first_n_sentences(tailored["summary"], 2)
 
     _clean_dashes_in_resume_data(tailored)
     return tailored
@@ -846,6 +862,60 @@ def _coerce_str_list(value) -> list:
     return [str(item).strip() for item in value if item is not None and str(item).strip()]
 
 
+def _first_n_sentences(text: str, n: int) -> str:
+    """
+    Return the first n sentences of text (used to hard-trim the summary in one-page mode).
+
+    Only treats a period as a boundary when the next sentence starts with a capital,
+    so abbreviations like "e.g. recommendation engines" or "Inc. and" (followed by a
+    lowercase word) don't cause a mid-sentence chop.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return text
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z])", text.strip())
+    return " ".join(parts[:n]).strip()
+
+
+def _recency_weighting_block(recent_roles: Optional[list], one_page: bool = False) -> str:
+    """
+    Build the recency-weighting directive: the 2 most recent roles are rewritten
+    ~80% toward the JD (JD-max but truthful); older roles stay ~80% original.
+    """
+    names = ""
+    if recent_roles:
+        labels = []
+        for r in recent_roles[:2]:
+            if not isinstance(r, dict):
+                continue
+            company = (r.get("company") or "").strip()
+            title = (r.get("title") or "").strip()
+            label = " at ".join(p for p in [title, company] if p)
+            if label:
+                labels.append(f'"{label}"')
+        if labels:
+            names = " (" + ", ".join(labels) + ")"
+    return (
+        "\n\n## Recency Weighting (IMPORTANT)"
+        "\nThe candidate's experience is listed most recent first."
+        f"\n\nPRIORITIZE THE 2 MOST RECENT ROLES{names}. For these roles:"
+        "\n- Rewrite the bullets so that roughly 80% of their content reflects THIS job description:"
+        " lead with the JD's exact stack, tools, and keywords; reframe the candidate's genuine and"
+        " transferable experience into the JD's vocabulary; cover as many JD requirements as the candidate"
+        " plausibly supports so these roles read as the strongest possible match. You may rewrite all of"
+        " their bullets to align with the JD."
+        "\n- Stay truthful: do NOT claim a technology the candidate has never used and has no adjacent"
+        " experience for (put those in keywords_missing, not in the bullets)."
+        "\n\nKEEP OLDER ROLES MOSTLY ORIGINAL. For every role AFTER the first two:"
+        + (
+            "\n- Keep only the 2 most representative, highest impact original bullets (one-page mode),"
+            " ordering them most important first, and preserve their original substance and focus."
+            if one_page else
+            "\n- Preserve roughly 80% of the original bullets' substance and focus."
+        )
+        + "\n- Only lightly weave in JD terms that genuinely applied there; do NOT force-fit JD keywords."
+    )
+
+
 def _call_claude_resume(
     client: anthropic.Anthropic,
     job: dict,
@@ -857,6 +927,7 @@ def _call_claude_resume(
     research_context: Optional[str] = None,
     tone: Optional[str] = None,
     focus_areas: Optional[list] = None,
+    recent_roles: Optional[list] = None,
 ) -> dict:
     """Call Claude to produce a tailored resume JSON in the company profile format."""
     prompt = _RESUME_PROMPT.format(
@@ -874,17 +945,25 @@ def _call_claude_resume(
         prompt += f"\n\n## Focus Areas\nEmphasize these areas: {', '.join(focus_areas)}."
     if template_id and template_id in _TEMPLATE_HINTS:
         prompt += f"\n\n## Layout Instructions\n{_TEMPLATE_HINTS[template_id]}"
+
+    # ── Recency weighting: recent 2 roles ~80% JD, older roles ~80% original ──
+    prompt += _recency_weighting_block(recent_roles, one_page=bool(one_page))
+
     safe_custom_prompt = _sanitize_custom_prompt(custom_prompt)
     if safe_custom_prompt:
         prompt += _fence_resume_directives(safe_custom_prompt)
     if one_page:
         prompt += (
             "\n\n## One-Page Constraint (STRICT — do not ignore)"
-            "\nThis resume MUST fit on a single printed page. Hard limits:"
-            "\n- Include ONLY the 2 most recent roles"
-            "\n- Maximum 3 bullet points per role — keep the highest-impact ones only"
-            "\n- Summary must be exactly 2 sentences"
-            "\n- Maximum 8 skills per category"
+            "\nThis resume MUST fit on ONE printed page, but KEEP ALL of the candidate's experiences"
+            " (never drop a role — only shorten each one). Hard limits:"
+            "\n- Keep EVERY experience entry. Do not remove any role."
+            "\n- The 2 most recent roles: AT MOST 3 bullets each. All older roles: AT MOST 2 bullets each."
+            "\n- Summary: exactly 2 sentences."
+            "\n- skills_list: AT MOST 6 items. tools_list: AT MOST 6 items."
+            "\n- When trimming, keep the highest impact, most JD relevant bullets, ordered most important first."
+            "\n- These per-role bullet limits and the 6-item caps take PRIORITY over any requested counts"
+            " (including custom instructions), because the resume must fit one page."
             "\nDo not exceed these limits under any circumstances."
         )
     try:
@@ -984,6 +1063,8 @@ def tailor_for_job(
 
     resume_text     = _resume_to_text(profile_resume_data)
     profile_context = _build_profile_context(profile_data)
+    # The 2 most recent roles (list is most-recent-first) get the 80% JD rewrite.
+    recent_roles    = (profile_resume_data.get("experience") or [])[:2]
 
     # ── Step 1: Tailored profile rewrite ─────────────────────────────────────
     claude_result = _call_claude_resume(
@@ -997,6 +1078,7 @@ def tailor_for_job(
         research_context=research_context,
         tone=tone,
         focus_areas=focus_areas,
+        recent_roles=recent_roles,
     )
 
     # ── Honest gap analysis from Claude (real JD-vs-resume comparison) ────────
@@ -1016,7 +1098,9 @@ def tailor_for_job(
     # A custom prompt may ask to drop a whole section ("discard tools") — allow an
     # explicit empty list from Claude to clear sections only when the user directed it.
     tailored_resume_data = _build_tailored_resume_data(
-        profile_resume_data, claude_result, allow_section_clearing=bool(custom_prompt)
+        profile_resume_data, claude_result,
+        allow_section_clearing=bool(custom_prompt),
+        one_page=one_page,
     )
 
     # ── Override contact fields from manual form ──────────────────────────────

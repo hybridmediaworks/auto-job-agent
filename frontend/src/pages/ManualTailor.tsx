@@ -390,7 +390,7 @@ export default function ManualTailor() {
               </span>
               {onePage && (
                 <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                  — 2 roles · 3 bullets max · 2-sentence summary
+                  — all roles kept · bullets trimmed · ≤6 skills/tools · fits one page
                 </span>
               )}
             </label>

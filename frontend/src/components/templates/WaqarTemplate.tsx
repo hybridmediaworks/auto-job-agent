@@ -35,7 +35,7 @@ export function WaqarTemplate({ data, photo }: TemplateProps) {
   )
 
   return (
-    <div style={{ width: 795, minHeight: 1124, fontFamily: FO, background: '#ffffff', boxSizing: 'border-box' as const, padding: '45px 53px 32px 53px' }}>
+    <div style={{ width: 794, minHeight: 1085, fontFamily: FO, background: '#ffffff', boxSizing: 'border-box' as const, padding: '45px 53px 32px 53px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: FM, fontSize: 32, fontWeight: 700, color: DARK, lineHeight: 1.1 }}>{data.name}</div>

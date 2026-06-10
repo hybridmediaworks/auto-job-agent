@@ -312,6 +312,7 @@ export interface ApplicationHistoryItem {
   tailored_at: string
   fit_score: number | null
   template_id: number | null
+  one_page: boolean
   keywords_matched: string[]
 }
 
@@ -384,6 +385,7 @@ export const tailorApi = {
       keywords_matched: data.keywords_matched,
       keywords_missing: data.keywords_missing,
       template_id: data.template_id,
+      one_page: data.one_page,
     });
     return response.data;
   },

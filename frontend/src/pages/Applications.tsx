@@ -6,6 +6,7 @@ import type { ApplicationHistoryItem, ApplicationHistoryPage } from '@/services/
 const PAGE_SIZE = 25
 import type { TailoredApplication } from '@/types'
 import { RidaTemplate, WaleedTemplate, ArhamTemplate, SherazTemplate, WaqarTemplate, AdeelTemplate, WaleedV2Template } from '@/components/ResumeTemplates'
+import { onePageFitScript } from '@/utils/onePageFit'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ const TEMPLATE_NAMES: Record<number, string> = {
   5: 'Muhammad Waqar',
 }
 
-function openPdfPrintWindow(html: string, name: string, jobTitle: string) {
+function openPdfPrintWindow(html: string, name: string, jobTitle: string, onePage = false) {
   const win = window.open('', '_blank', 'width=900,height=700')
   if (!win) { alert('Popup blocked — please allow popups for this site.'); return }
   const safeName = name.replace(/\s+/g, '_')
@@ -35,7 +36,7 @@ function openPdfPrintWindow(html: string, name: string, jobTitle: string) {
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${safeName}_${safeJob}</title>
 <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;700&family=Montserrat:wght@400;500;600;700;900&family=Open+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}@page{size:A4 portrait;margin:10mm 0}@page :first{margin-top:0;margin-bottom:10mm}html,body{margin:0;padding:0;background:white}</style>
-</head><body>${html}<script>window.onload=function(){setTimeout(function(){window.print()},800)}<\/script></body></html>`)
+</head><body><div id="__fit" style="transform-origin:top left">${html}</div><script>window.onload=function(){setTimeout(function(){${onePageFitScript(onePage)}window.print()},800)}<\/script></body></html>`)
   win.document.close()
 }
 
@@ -85,7 +86,11 @@ function ResumeModal({
 
   const refineMutation = useMutation({
     mutationFn: () =>
-      tailorApi.generate(item.job_id, item.profile_id, customPrompt.trim(), item.template_id ?? undefined),
+      // Preserve the one-page setting through a refine (was previously dropped → reverted to 2-page)
+      tailorApi.generate(
+        item.job_id, item.profile_id, customPrompt.trim(), item.template_id ?? undefined,
+        data?.one_page ?? item.one_page,
+      ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tailoring', item.job_id] })
       qc.invalidateQueries({ queryKey: ['application-history'] })
@@ -105,7 +110,7 @@ function ResumeModal({
   function handleDownloadPdf() {
     if (!templateRef.current) { alert('Template not ready yet.'); return }
     const name = (resumeData?.name as string) || 'Resume'
-    openPdfPrintWindow(templateRef.current.outerHTML, name, item.job_title)
+    openPdfPrintWindow(templateRef.current.outerHTML, name, item.job_title, data?.one_page ?? item.one_page)
   }
 
   return (
