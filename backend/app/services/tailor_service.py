@@ -60,6 +60,12 @@ _TEMPLATE_HINTS: dict[int, str] = {
         "key_achievements will appear prominently in the sidebar — make them punchy and results-focused (4-5 items). "
         "Keep skills_list short individual labels (2-4 words) for colored pill badges. Keep tools_list as individual tool names for icons."
     ),
+    5: (
+        "LAYOUT: Muhammad Waqar template. White page, blue initials badge top right, name + blue role title header, "
+        "contact row, About Me paragraph, Experience entries (title, blue company, dates) separated by dashed lines, "
+        "and a bordered grid of skill cells at the bottom. "
+        "Keep skills_list short individual labels (1-3 words) for the bordered grid cells. Keep tools_list as individual tool names."
+    ),
     4: (
         "LAYOUT: Sheraz Khalid template. White page with faint orange watermark name. Centered orange name + grey role title header. "
         "Left column: Contact, Education, Expertise bullets (expertise_bullets, orange dots), Skills (orange pills only — no rainbow), Additional Skills (soft skills as orange-dot bullet list). "
@@ -76,6 +82,16 @@ _TEMPLATE_HINTS: dict[int, str] = {
         "Right column (~68%) has Experience (title and company on one line with blue pipe separator, dates on right), Education. "
         "Blue accent color throughout (#1565c0). "
         "Keep skills_list short labels for blue rectangular pills. Keep tools_list as individual tool names for icons."
+    ),
+    8: (
+        "LAYOUT: Adeel V2 template. Purple header band (#8b52ff) with large yellow name, white uppercase role title "
+        "between two white lines, and a contact row (email, phone, location) with cyan circle icons. "
+        "Two-column body split by a cyan vertical bar: Left column has About Me (summary), Skills (purple rectangular "
+        "pills), Tools (icons), Portfolio images, Useful Links. Right column has Experience (underlined title, purple "
+        "company name, dates in pipes) and Education (two columns side by side). "
+        "Keep skills_list short individual labels (1-3 words) for the purple pills, around 15-20 of them. "
+        "Keep tools_list as individual tool names for icons (max 6). "
+        "Summary should be a single dense paragraph (4-6 sentences) since it fills the About Me box."
     ),
     7: (
         "LAYOUT: Mirza Waleed template. Light green top and bottom bars (#7DC242). "
@@ -107,9 +123,9 @@ HONESTY (STRICT):
   experience for.
 - You MAY reframe genuine and adjacent experience using the job's own terminology, and you
   SHOULD emphasize the candidate's real strengths. But emphasis is not invention.
-- ROLE TITLES: the 2 most recent roles' titles ARE intentionally aligned to the target role (see
-  the Recency Weighting section); that is allowed. Do NOT change older roles' titles, and never
-  change a company/employer name.
+- ROLE TITLES: only the SINGLE most recent role's title IS intentionally aligned to the target
+  role (see the Recency Weighting section); that is allowed. Do NOT change any other role's title,
+  and never change a company/employer name.
 - If the job requires something the candidate genuinely lacks, leave it out of the experience
   bullets and report it honestly under keywords_missing instead of claiming it.
 
@@ -198,7 +214,7 @@ Return ONLY this JSON:
     {{
       "company": "<original company name, UNCHANGED>",
       "original_title": "<the role's title EXACTLY as in the profile, UNCHANGED — this is used to match this entry back to the profile, so it must equal the original>",
-      "title": "<the title to DISPLAY: identical to original_title for older roles; for the 2 MOST RECENT roles, the JD target role with the candidate's original seniority kept (see Recency Weighting)>",
+      "title": "<the title to DISPLAY: identical to original_title for every role EXCEPT the single most recent one, which gets the JD target role with the candidate's original seniority kept (see Recency Weighting)>",
       "tailored_bullets": [
         "<XYZ bullet 1: Must-Have tech from JD — stated directly by name, no hedging>",
         "<XYZ bullet 2: More Required tech from JD — state exact tool/framework names>",
@@ -223,7 +239,7 @@ IMPORTANT for tailored_experience:
 - Generate 4 to 6 bullets per role BY DEFAULT, unless the candidate's custom instructions specify a different number (then use exactly that number).
 - DO NOT invent projects, employers, or technologies. Reframe and reinterpret EXISTING work to highlight what the employer needs.
 - If a specific metric is unknown, use a compelling generic phrase. Examples: "across multiple client projects", "for several production environments", "significantly reducing manual effort", "improving delivery speed across concurrent builds". Never leave brackets like [X] or [Y] in the output.
-- Keep each company and employer exactly as in the profile (never invent one). For the 2 MOST RECENT roles, set their "title" to the target role from the JD (see Recency Weighting). For all OTHER roles, keep the original title UNLESS the candidate's custom instructions ask to change a specific title.
+- Keep each company and employer exactly as in the profile (never invent one). For the SINGLE MOST RECENT role only, set its "title" to the target role from the JD (see Recency Weighting). For ALL other roles (including the second most recent), keep the original title UNLESS the candidate's custom instructions ask to change a specific title.
 - NEVER use hyphens or dashes in any bullet text. Use commas instead.
 
 IMPORTANT for tools_list:
@@ -499,7 +515,7 @@ def _build_tailored_resume_data(
     and the original section is preserved (avoids accidentally wiping a section).
 
     one_page: when True, hard-trim to fit one page while KEEPING ALL experiences —
-    recent 2 roles ≤3 bullets, older roles ≤2, skills ≤6, tools ≤6, summary ≤2 sentences.
+    recent 2 roles ≤3 bullets, older roles ≤2, tools ≤6 (skills uncapped), summary ≤2 sentences.
     """
     tailored = copy.deepcopy(original)
 
@@ -587,13 +603,13 @@ def _build_tailored_resume_data(
         if new_title:
             exp["title"] = new_title
 
-    # ── Strict one-page caps: KEEP every experience, just trim each one ───────
+    # ── Strict one-page caps: KEEP every experience, just trim each one.
+    # Skills are intentionally NOT capped (only tools are) — the PDF auto-fit
+    # scale guarantees one page even with a full pill wall.
     if one_page:
         for idx, exp in enumerate(tailored.get("experience", [])):
             if isinstance(exp.get("bullets"), list):
                 exp["bullets"] = exp["bullets"][: (3 if idx < 2 else 2)]
-        if isinstance(tailored.get("skills_list"), list):
-            tailored["skills_list"] = tailored["skills_list"][:6]
         if isinstance(tailored.get("tools_list"), list):
             tailored["tools_list"] = tailored["tools_list"][:6]
         if isinstance(tailored.get("summary"), str):
@@ -890,48 +906,50 @@ def _first_n_sentences(text: str, n: int) -> str:
 
 def _recency_weighting_block(recent_roles: Optional[list], one_page: bool = False, jd_title: str = "") -> str:
     """
-    Build the recency-weighting directive: the 2 most recent roles are rewritten
-    ~80% toward the JD (JD-max but truthful), get a JD-aligned title, and open with
-    the target role in their first bullet; older roles stay ~80% original.
+    Build the recency-weighting directive: the 2 most recent roles get bullets
+    rewritten ~80% toward the JD (JD-max but truthful); ONLY the single most recent
+    role also gets a JD-aligned title and the "As a {role}, ..." first bullet
+    (doing it on both read as repetitive). Older roles stay ~80% original.
     """
-    names = ""
-    if recent_roles:
-        labels = []
-        for r in recent_roles[:2]:
-            if not isinstance(r, dict):
-                continue
-            company = (r.get("company") or "").strip()
-            title = (r.get("title") or "").strip()
-            label = " at ".join(p for p in [title, company] if p)
-            if label:
-                labels.append(f'"{label}"')
-        if labels:
-            names = " (" + ", ".join(labels) + ")"
+    def _label(r) -> str:
+        if not isinstance(r, dict):
+            return ""
+        company = (r.get("company") or "").strip()
+        title = (r.get("title") or "").strip()
+        return " at ".join(p for p in [title, company] if p)
+
+    roles = recent_roles or []
+    first = f' ("{_label(roles[0])}")' if roles and _label(roles[0]) else ""
+    second = f' ("{_label(roles[1])}")' if len(roles) > 1 and _label(roles[1]) else ""
     target = (jd_title or "the target role").strip() or "the target role"
     return (
         "\n\n## Recency Weighting (IMPORTANT)"
         "\nThe candidate's experience is listed most recent first."
-        f"\n\nPRIORITIZE THE 2 MOST RECENT ROLES{names}. Apply ALL of the following to EACH of those two"
-        " roles equally — the 1st AND the 2nd most recent role must be tailored with the SAME strength"
-        " (do not make the second one weaker):"
+        f"\n\nTHE 2 MOST RECENT ROLES: rewrite the bullets of EACH of these two roles with the SAME strength"
+        " (do not make the second one weaker) so that roughly 80% of the content reflects THIS job"
+        " description — lead with the JD's exact stack, tools, and keywords; reframe the candidate's genuine"
+        " and transferable experience into the JD's vocabulary; cover as many JD requirements as the candidate"
+        " plausibly supports. You may rewrite all of their bullets to align with the JD."
+        f"\n\nONLY THE SINGLE MOST RECENT ROLE{first} additionally gets:"
         f"\n- TITLE: set this role's \"title\" to the target role from the JD ({target}), keeping the"
         " candidate's ORIGINAL seniority level (do not inflate — if the original title was not Senior/Lead,"
         " do not add Senior/Lead). Keep it close and believable. Keep the company/employer unchanged."
         f"\n- FIRST BULLET: the FIRST bullet of this role must open by naming the target role, e.g."
         f" \"As a {target}, ...\" or \"Working as a {target}, ...\", then state a concrete achievement using"
         " the JD's stack."
-        "\n- BULLETS: rewrite so that roughly 80% of the content reflects THIS job description — lead with the"
-        " JD's exact stack, tools, and keywords; reframe the candidate's genuine and transferable experience"
-        " into the JD's vocabulary; cover as many JD requirements as the candidate plausibly supports. You may"
-        " rewrite all of the bullets to align with the JD."
-        "\n- Stay truthful: do NOT claim a technology the candidate has never used and has no adjacent"
-        " experience for (put those in keywords_missing, not in the bullets). Titles and bullets may align to"
-        " the JD, but never invent the employer, company, or dates."
+        f"\n\nTHE SECOND MOST RECENT ROLE{second} keeps its ORIGINAL title exactly, and its bullets must NOT"
+        f" open with \"As a {target}\" phrasing — repeating the opener on two roles reads as artificial."
+        " Its bullets still get the full 80% JD rewrite described above."
+        "\n\nStay truthful for all roles: do NOT claim a technology the candidate has never used and has no"
+        " adjacent experience for (put those in keywords_missing, not in the bullets). The title may align to"
+        " the JD only for the most recent role; never invent an employer, company, or dates."
         f"\n\n<example>"
-        f"\nJD target role: \"{target}\". Original recent role: \"WordPress Developer at Acme\"."
-        f"\nTailored entry -> title: \"{target}\" (seniority kept), first tailored_bullet:"
+        f"\nJD target role: \"{target}\". Most recent role: \"WordPress Developer at Acme\";"
+        f" second most recent: \"Web Developer at Globex\"."
+        f"\nMost recent entry -> title: \"{target}\" (seniority kept), first tailored_bullet:"
         f" \"As a {target}, designed and shipped ...\" (then JD-stack achievements)."
-        f"\nApply the SAME treatment to BOTH recent roles."
+        f"\nSecond entry -> title stays \"Web Developer\"; bullets fully JD-aligned but with NO"
+        f" \"As a {target}\" opener."
         f"\n</example>"
         "\n\nKEEP OLDER ROLES MOSTLY ORIGINAL. For every role AFTER the first two:"
         + (
@@ -990,7 +1008,7 @@ def _call_claude_resume(
             "\n- Keep EVERY experience entry. Do not remove any role."
             "\n- The 2 most recent roles: AT MOST 3 bullets each. All older roles: AT MOST 2 bullets each."
             "\n- Summary: exactly 2 sentences."
-            "\n- skills_list: AT MOST 6 items. tools_list: AT MOST 6 items."
+            "\n- tools_list: AT MOST 6 items. skills_list is NOT capped, keep it complete."
             "\n- When trimming, keep the highest impact, most JD relevant bullets, ordered most important first."
             "\n- These per-role bullet limits and the 6-item caps take PRIORITY over any requested counts"
             " (including custom instructions), because the resume must fit one page."

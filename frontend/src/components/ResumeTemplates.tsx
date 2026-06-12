@@ -1,7 +1,7 @@
 /**
  * Barrel re-export for resume templates.
  *
- * The 7 template components and their shared helpers live under ./templates/.
+ * The 8 template components and their shared helpers live under ./templates/.
  * This file preserves the original import surface so existing call sites
  * (`import { WaleedTemplate, RESUME_TEMPLATES, TemplateCard, ... } from '@/components/ResumeTemplates'`)
  * keep working without changes.
@@ -26,6 +26,7 @@ export {
   TemplateSvgSheraz,
   TemplateSvgAdeel,
   TemplateSvgWaleedV2,
+  TemplateSvgAdeelV2,
   TemplateSvg,
   TemplateCard,
 } from './templates/previews'
@@ -37,3 +38,4 @@ export { SherazTemplate } from './templates/SherazTemplate'
 export { WaqarTemplate } from './templates/WaqarTemplate'
 export { AdeelTemplate } from './templates/AdeelTemplate'
 export { WaleedV2Template } from './templates/WaleedV2Template'
+export { AdeelV2Template } from './templates/AdeelV2Template'

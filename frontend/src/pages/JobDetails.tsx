@@ -17,6 +17,7 @@ import {
   WaqarTemplate,
   AdeelTemplate,
   WaleedV2Template,
+  AdeelV2Template,
   TemplateCard,
 } from '@/components/ResumeTemplates'
 
@@ -261,7 +262,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
   <title>${safeName}_${safeJob}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;700&family=Montserrat:wght@400;500;600;700;900&family=Open+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;700&family=Montserrat:wght@300;400;500;600;700;900&family=Open+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; box-sizing: border-box; }
     @page { size: A4 portrait; margin: 10mm 0; }
@@ -474,6 +475,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
                   : tplId === 5 ? <WaqarTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : tplId === 6 ? <AdeelTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : tplId === 7 ? <WaleedV2Template data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                  : tplId === 8 ? <AdeelV2Template data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : <RidaTemplate data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                 }
               </div>
@@ -532,6 +534,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
                   : previewTplId === 5 ? <WaqarTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : previewTplId === 6 ? <AdeelTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : previewTplId === 7 ? <WaleedV2Template data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                  : previewTplId === 8 ? <AdeelV2Template data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : <RidaTemplate   data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                 }
               </div>
@@ -627,7 +630,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input type="checkbox" checked={onePage} onChange={e => setOnePage(e.target.checked)} className="rounded" style={{ accentColor: '#7DC242' }} />
           <span className="text-sm font-medium" style={{ color: onePage ? '#7DC242' : 'var(--text-muted)' }}>1-Page Resume</span>
-          {onePage && <span className="text-xs" style={{ color: '#6b7280' }}>— all roles kept · bullets trimmed · ≤6 skills/tools · fits one page</span>}
+          {onePage && <span className="text-xs" style={{ color: '#6b7280' }}>— all roles kept · bullets trimmed · ≤6 tools · fits one page</span>}
         </label>
 
         {/* Tone */}
@@ -747,6 +750,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
                   : tplId === 5 ? <WaqarTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : tplId === 6 ? <AdeelTemplate  data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : tplId === 7 ? <WaleedV2Template data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
+                  : tplId === 8 ? <AdeelV2Template data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                   : <RidaTemplate data={displayResult.tailored_resume_data as Record<string,any>} photo={profilePhoto} />
                 }
               </div>
@@ -809,6 +813,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
                   : previewTplId === 5 ? <WaqarTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : previewTplId === 6 ? <AdeelTemplate  data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : previewTplId === 7 ? <WaleedV2Template data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
+                  : previewTplId === 8 ? <AdeelV2Template data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                   : <RidaTemplate   data={previewData.tailored_resume_data as Record<string, any>} photo={profilePhoto} />
                 }
               </div>

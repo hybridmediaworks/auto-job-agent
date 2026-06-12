@@ -8,6 +8,7 @@ export const RESUME_TEMPLATES = [
   { id: 5, name: 'Muhammad Waqas', description: 'White + blue initials badge, bordered skills grid, dashed separators.' },
   { id: 6, name: 'Adeel Shahzad', description: 'Dark blue header, white/blue column layout, skill pills, tool icons.' },
   { id: 7, name: 'Mirza Waleed', description: 'Green accents top/bottom, clean two-column layout, gray skill pills.' },
+  { id: 8, name: 'Adeel V2', description: 'Purple header, yellow name, cyan divider, purple skill pills.' },
 ]
 
 // ── Template SVGs ──────────────────────────────────────────────────────────────
@@ -236,7 +237,68 @@ export function TemplateSvgWaleedV2() {
   )
 }
 
+export function TemplateSvgAdeelV2() {
+  return (
+    <svg viewBox="0 0 110 140" className="w-full h-full">
+      <rect x="0" y="0" width="110" height="140" fill="#ffffff"/>
+      <rect x="2" y="2" width="106" height="24" fill="#8b52ff"/>
+      <rect x="28" y="6" width="54" height="6" rx="1" fill="#f8e53c"/>
+      <rect x="14" y="15" width="20" height="1" fill="#ffffff"/>
+      <rect x="38" y="14" width="34" height="2.5" rx="0.5" fill="#ffffff"/>
+      <rect x="76" y="15" width="20" height="1" fill="#ffffff"/>
+      <circle cx="12" cy="22" r="1.8" fill="#5ce1e6"/>
+      <circle cx="50" cy="22" r="1.8" fill="#5ce1e6"/>
+      <circle cx="88" cy="22" r="1.8" fill="#5ce1e6"/>
+      <rect x="44" y="30" width="2" height="106" fill="#5ce1e6"/>
+      <rect x="5" y="32" width="18" height="2.5" rx="0.5" fill="#8b52ff"/>
+      <rect x="5" y="36" width="36" height="1" fill="#818181"/>
+      <rect x="5" y="39" width="36" height="10" rx="0.5" fill="#f1f1f1"/>
+      <rect x="5" y="53" width="12" height="2.5" rx="0.5" fill="#8b52ff"/>
+      <rect x="5" y="57" width="36" height="1" fill="#818181"/>
+      <rect x="5" y="60" width="11" height="4" rx="0.5" fill="#8b52ff"/>
+      <rect x="18" y="60" width="13" height="4" rx="0.5" fill="#8b52ff"/>
+      <rect x="33" y="60" width="8" height="4" rx="0.5" fill="#8b52ff"/>
+      <rect x="5" y="66" width="14" height="4" rx="0.5" fill="#8b52ff"/>
+      <rect x="21" y="66" width="11" height="4" rx="0.5" fill="#8b52ff"/>
+      <rect x="5" y="76" width="11" height="2.5" rx="0.5" fill="#8b52ff"/>
+      <rect x="5" y="80" width="36" height="1" fill="#818181"/>
+      <rect x="5" y="83" width="8" height="8" rx="1.5" fill="#777bb3"/>
+      <rect x="15" y="83" width="8" height="8" rx="1.5" fill="#21759b"/>
+      <rect x="25" y="83" width="8" height="8" rx="1.5" fill="#f05033"/>
+      <rect x="5" y="97" width="16" height="2.5" rx="0.5" fill="#8b52ff"/>
+      <rect x="5" y="101" width="36" height="1" fill="#818181"/>
+      <rect x="5" y="104" width="17" height="12" rx="0.5" fill="#e5e7eb"/>
+      <rect x="24" y="104" width="17" height="12" rx="0.5" fill="#e5e7eb"/>
+      <rect x="50" y="32" width="22" height="2.5" rx="0.5" fill="#8b52ff"/>
+      <rect x="50" y="36" width="55" height="1" fill="#818181"/>
+      <rect x="50" y="40" width="26" height="2" rx="0.5" fill="#1a1a1a"/>
+      <rect x="78" y="40" width="14" height="2" rx="0.5" fill="#8b52ff"/>
+      <rect x="50" y="45" width="55" height="1.3" rx="0.3" fill="#9ca3af"/>
+      <rect x="50" y="48" width="50" height="1.3" rx="0.3" fill="#9ca3af"/>
+      <rect x="50" y="51" width="53" height="1.3" rx="0.3" fill="#9ca3af"/>
+      <rect x="50" y="58" width="26" height="2" rx="0.5" fill="#1a1a1a"/>
+      <rect x="78" y="58" width="14" height="2" rx="0.5" fill="#8b52ff"/>
+      <rect x="50" y="63" width="55" height="1.3" rx="0.3" fill="#9ca3af"/>
+      <rect x="50" y="66" width="48" height="1.3" rx="0.3" fill="#9ca3af"/>
+      <rect x="50" y="69" width="52" height="1.3" rx="0.3" fill="#9ca3af"/>
+      <rect x="50" y="76" width="26" height="2" rx="0.5" fill="#1a1a1a"/>
+      <rect x="78" y="76" width="14" height="2" rx="0.5" fill="#8b52ff"/>
+      <rect x="50" y="81" width="55" height="1.3" rx="0.3" fill="#9ca3af"/>
+      <rect x="50" y="84" width="49" height="1.3" rx="0.3" fill="#9ca3af"/>
+      <rect x="50" y="92" width="20" height="2.5" rx="0.5" fill="#8b52ff"/>
+      <rect x="50" y="96" width="55" height="1" fill="#818181"/>
+      <rect x="51" y="100" width="1" height="10" fill="#b9b9b9"/>
+      <rect x="55" y="100" width="20" height="2" rx="0.5" fill="#1a1a1a"/>
+      <rect x="55" y="104" width="16" height="1.3" rx="0.3" fill="#9ca3af"/>
+      <rect x="79" y="100" width="1" height="10" fill="#b9b9b9"/>
+      <rect x="83" y="100" width="20" height="2" rx="0.5" fill="#1a1a1a"/>
+      <rect x="83" y="104" width="16" height="1.3" rx="0.3" fill="#9ca3af"/>
+    </svg>
+  )
+}
+
 export function TemplateSvg({ id }: { id: number }) {
+  if (id === 8) return <TemplateSvgAdeelV2 />
   if (id === 6) return <TemplateSvgAdeel />
   if (id === 7) return <TemplateSvgWaleedV2 />
   if (id === 3) return <TemplateSvgArham />

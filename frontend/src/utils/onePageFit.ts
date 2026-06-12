@@ -15,12 +15,14 @@
  */
 export function onePageFitScript(onePage: boolean): string {
   if (!onePage) return ''
-  // 1080px ≈ A4 portrait printable height at 96dpi for the 794px-wide template
-  // (first page: 297mm − 10mm bottom margin), with a small safety buffer.
+  // First-page printable height at 96dpi for the 794px A4 template: 297mm − 10mm
+  // bottom margin ≈ 1085px. Every template's root has minHeight 1085, so content
+  // at or under 1085 already fits exactly one page — only scale on real overflow,
+  // targeting 1080 (a 5px safety buffer) so short resumes print fully unscaled.
   return (
     "try{var __f=document.getElementById('__fit');var __e=__f&&__f.firstElementChild;" +
-    "if(__e){var __p=1080;var __h=__e.scrollHeight;" +
-    "if(__h>__p){var __s=__p/__h;__e.style.transformOrigin='top left';" +
+    "if(__e){var __t=1085;var __p=1080;var __h=__e.scrollHeight;" +
+    "if(__h>__t){var __s=__p/__h;__e.style.transformOrigin='top left';" +
     "__e.style.transform='scale('+__s+')';__f.style.height=__p+'px';__f.style.overflow='hidden';}}}catch(e){}"
   )
 }

@@ -15,6 +15,7 @@ const RESUME_TEMPLATES = [
   { id: 5, name: 'Muhammad Waqar',  description: 'Blue initials, grid skills',accent: '#3B5BD9', bg: '#0a1528' },
   { id: 6, name: 'Adeel Shahzad',   description: 'Dark blue, skill pills',    accent: '#1565c0', bg: '#0d1f33' },
   { id: 7, name: 'Mirza Waleed',    description: 'Green bars, two-column',    accent: '#7DC242', bg: '#0d1f0d' },
+  { id: 8, name: 'Adeel V2',        description: 'Purple header, cyan divider', accent: '#8b52ff', bg: '#190d33' },
 ]
 
 const TONES = ['Professional', 'Technical', 'Enthusiastic']
@@ -390,7 +391,7 @@ export default function ManualTailor() {
               </span>
               {onePage && (
                 <span className="text-xs" style={{ color: 'var(--text-faint)' }}>
-                  — all roles kept · bullets trimmed · ≤6 skills/tools · fits one page
+                  — all roles kept · bullets trimmed · ≤6 tools · fits one page
                 </span>
               )}
             </label>

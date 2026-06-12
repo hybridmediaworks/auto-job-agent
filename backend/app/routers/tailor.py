@@ -36,7 +36,7 @@ applications_router = APIRouter(prefix="/api/applications", tags=["applications"
 class TailorRequest(BaseModel):
     profile_id: Optional[int] = None   # None → use default profile
     custom_prompt: Optional[str] = None # Optional user instructions for AI generation
-    template_id: Optional[int] = None  # 1=Classic, 2=Two-Column, 3=Creative
+    template_id: Optional[int] = None  # 1=Rida 2=Waleed 3=Arham 4=Sheraz 5=Waqar 6=Adeel 7=WaleedV2 8=AdeelV2
     one_page: bool = False              # Inject strict 1-page brevity constraint
     tone: Optional[str] = None          # Professional | Technical | Enthusiastic
     focus_areas: Optional[List[str]] = None  # e.g. ['Architecture', 'Leadership']

@@ -5,7 +5,7 @@ import type { ApplicationHistoryItem, ApplicationHistoryPage } from '@/services/
 
 const PAGE_SIZE = 25
 import type { TailoredApplication } from '@/types'
-import { RidaTemplate, WaleedTemplate, ArhamTemplate, SherazTemplate, WaqarTemplate, AdeelTemplate, WaleedV2Template } from '@/components/ResumeTemplates'
+import { RidaTemplate, WaleedTemplate, ArhamTemplate, SherazTemplate, WaqarTemplate, AdeelTemplate, WaleedV2Template, AdeelV2Template } from '@/components/ResumeTemplates'
 import { onePageFitScript } from '@/utils/onePageFit'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -22,10 +22,13 @@ function formatDate(iso: string): string {
 
 const TEMPLATE_NAMES: Record<number, string> = {
   1: 'Rida Saeed',
-  2: 'Mirza Waleed',
+  2: 'Waleed',
   3: 'Arham Saeed',
   4: 'Sheraz Khalid',
   5: 'Muhammad Waqar',
+  6: 'Adeel Shahzad',
+  7: 'Mirza Waleed',
+  8: 'Adeel V2',
 }
 
 function openPdfPrintWindow(html: string, name: string, jobTitle: string, onePage = false) {
@@ -34,7 +37,7 @@ function openPdfPrintWindow(html: string, name: string, jobTitle: string, onePag
   const safeName = name.replace(/\s+/g, '_')
   const safeJob = jobTitle.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40)
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${safeName}_${safeJob}</title>
-<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;700&family=Montserrat:wght@400;500;600;700;900&family=Open+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;700&family=Montserrat:wght@300;400;500;600;700;900&family=Open+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}@page{size:A4 portrait;margin:10mm 0}@page :first{margin-top:0;margin-bottom:10mm}html,body{margin:0;padding:0;background:white}</style>
 </head><body><div id="__fit" style="transform-origin:top left">${html}</div><script>window.onload=function(){setTimeout(function(){${onePageFitScript(onePage)}window.print()},800)}<\/script></body></html>`)
   win.document.close()
@@ -62,6 +65,7 @@ function TemplateRenderer({ tplId, data, photo }: { tplId: number; data: Record<
   if (tplId === 5) return <WaqarTemplate data={data} photo={photo} />
   if (tplId === 6) return <AdeelTemplate data={data} photo={photo} />
   if (tplId === 7) return <WaleedV2Template data={data} photo={photo} />
+  if (tplId === 8) return <AdeelV2Template data={data} photo={photo} />
   return <p className="text-sm text-center py-8" style={{ color: 'var(--text-muted)' }}>No template selected for this resume.</p>
 }
 
