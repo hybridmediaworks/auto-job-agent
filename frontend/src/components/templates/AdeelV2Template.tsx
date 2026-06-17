@@ -1,4 +1,4 @@
-import { ensureUrl, cleanText, resolveTools, ToolIconBox, PortfolioGrid, nonEmpty } from './shared'
+import { ensureUrl, cleanText, resolveTools, ToolIconBox, nonEmpty } from './shared'
 import type { TemplateProps } from './shared'
 
 /**
@@ -43,7 +43,7 @@ export function AdeelV2Template({ data, photo: _photo }: TemplateProps) {
   )
 
   return (
-    <div style={{ width: 794, minHeight: 1085, fontFamily: I, background: '#ffffff', boxSizing: 'border-box' as const, padding: '11px 11px 0 11px' }}>
+    <div style={{ width: 794, minHeight: 1122, fontFamily: I, background: '#ffffff', boxSizing: 'border-box' as const, display: 'flex', flexDirection: 'column' as const }}>
       {/* ── Purple header: name, title with flanking lines, contact row ── */}
       <div style={{ background: PURPLE, padding: '4px 36px 11px 36px' }}>
         <div style={{ fontFamily: P, fontSize: 47, fontWeight: 700, color: YELLOW, textAlign: 'center' as const, lineHeight: 1.12 }}>{data.name}</div>
@@ -74,8 +74,11 @@ export function AdeelV2Template({ data, photo: _photo }: TemplateProps) {
         </div>
       </div>
 
-      {/* ── Two-column body split by the 5px cyan bar (flush with header bottom) ── */}
-      <div style={{ display: 'flex', padding: '0 7px 28px 7px' }}>
+      {/* ── Two-column body split by the 5px cyan bar (flush with header bottom).
+           flex: 1 makes the body — and the alignSelf:stretch divider — fill the full
+           template height, so the divider terminates the page instead of stopping
+           wherever content happens to end. ── */}
+      <div style={{ display: 'flex', padding: '0 18px 28px 18px', flex: 1 }}>
         {/* Left column */}
         <div style={{ width: 294, flexShrink: 0, paddingRight: 13, paddingTop: 26 }}>
           {data.summary && (
@@ -86,7 +89,7 @@ export function AdeelV2Template({ data, photo: _photo }: TemplateProps) {
           )}
 
           {skills.length > 0 && (
-            <div style={{ marginBottom: 24, breakInside: 'avoid' as const }}>
+            <div style={{ marginBottom: 24, breakInside: 'avoid' as const, pageBreakInside: 'avoid' as const }}>
               <SectionHeader label="Skills:" />
               <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
                 {skills.map((skill, i) => (
@@ -97,7 +100,7 @@ export function AdeelV2Template({ data, photo: _photo }: TemplateProps) {
           )}
 
           {tools.length > 0 && (
-            <div style={{ marginBottom: 24, breakInside: 'avoid' as const }}>
+            <div style={{ marginBottom: 24, breakInside: 'avoid' as const, pageBreakInside: 'avoid' as const }}>
               <SectionHeader label="Tools:" />
               <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 9 }}>
                 {tools.map((tool, i) => <ToolIconBox key={i} {...tool} size={40} />)}
@@ -106,14 +109,22 @@ export function AdeelV2Template({ data, photo: _photo }: TemplateProps) {
           )}
 
           {data.portfolio_images && data.portfolio_images.length > 0 && (
-            <div style={{ marginBottom: 24, breakInside: 'avoid' as const }}>
+            <div style={{ marginBottom: 24, breakInside: 'avoid' as const, pageBreakInside: 'avoid' as const }}>
               <SectionHeader label="Portfolio:" sparkle />
-              <PortfolioGrid images={data.portfolio_images} />
+              {/* Single compact row of thumbnails (object-fit: cover preserves each image's
+                  aspect ratio, just crops) — keeps the sidebar within one page. */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                {data.portfolio_images.slice(0, 4).map((src: string, i: number) => (
+                  <div key={i} style={{ flex: 1, height: 54, overflow: 'hidden', borderRadius: 4 }}>
+                    <img src={src} crossOrigin="anonymous" alt={`Portfolio ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' as const, display: 'block' }} />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
           {usefulLinks.length > 0 && (
-            <div style={{ marginBottom: 24, breakInside: 'avoid' as const }}>
+            <div style={{ marginBottom: 24, breakInside: 'avoid' as const, pageBreakInside: 'avoid' as const }}>
               <SectionHeader label="Useful Links:" />
               {usefulLinks.map((link, i) => (
                 <div key={i} style={{ display: 'flex', gap: 7, alignItems: 'flex-start', marginBottom: 4 }}>
@@ -129,19 +140,21 @@ export function AdeelV2Template({ data, photo: _photo }: TemplateProps) {
         <div style={{ width: 5, background: CYAN, flexShrink: 0, alignSelf: 'stretch' }} />
 
         {/* Right column */}
-        <div style={{ flex: 1, paddingLeft: 17, paddingTop: 26, minWidth: 0 }}>
+        <div style={{ flex: 1, paddingLeft: 17, paddingRight: 13, paddingTop: 26, minWidth: 0 }}>
           {experience.length > 0 && (
             <div style={{ marginBottom: 26 }}>
               <SectionHeader label="Experience" />
               {experience.map((exp: any, i: number) => (
-                <div key={i} style={{ marginBottom: 19, breakInside: 'avoid' as const }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, gap: 8 }}>
-                    <div style={{ minWidth: 0 }}>
+                <div key={i} style={{ marginBottom: 19, breakInside: 'avoid' as const, pageBreakInside: 'avoid' as const }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap' as const, alignItems: 'baseline', marginBottom: 8, columnGap: 8, rowGap: 2 }}>
+                    <div style={{ minWidth: 0, flex: '1 1 auto' }}>
                       <span style={{ fontFamily: I, fontSize: 12.9, color: '#010101', textDecoration: 'underline', textUnderlineOffset: 3 }}>{exp.title}</span>
                       <span style={{ fontFamily: I, fontSize: 12.9, color: '#010101' }}> | </span>
-                      <span style={{ fontFamily: P, fontSize: 12.6, fontWeight: 600, color: PURPLE }}>{exp.company}</span>
+                      {/* company kept on one unit so a long name never splits mid-word */}
+                      <span style={{ fontFamily: P, fontSize: 12.6, fontWeight: 600, color: PURPLE, whiteSpace: 'nowrap' as const }}>{exp.company}</span>
                     </div>
-                    <div style={{ fontFamily: I, fontSize: 12, color: '#010101', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>| {exp.start_date} - {exp.end_date || 'Present'} |</div>
+                    {/* dates pinned right; drop to their own right-aligned line if the row is tight */}
+                    <div style={{ fontFamily: I, fontSize: 12, color: '#010101', whiteSpace: 'nowrap' as const, flexShrink: 0, marginLeft: 'auto' }}>| {exp.start_date} - {exp.end_date || 'Present'} |</div>
                   </div>
                   {nonEmpty(exp.bullets).map((b: string, j: number) => (
                     <div key={j} style={{ display: 'flex', gap: 9, marginBottom: 3, paddingLeft: 6 }}>
@@ -155,7 +168,7 @@ export function AdeelV2Template({ data, photo: _photo }: TemplateProps) {
           )}
 
           {education.length > 0 && (
-            <div style={{ marginBottom: 24, breakInside: 'avoid' as const }}>
+            <div style={{ marginBottom: 24, breakInside: 'avoid' as const, pageBreakInside: 'avoid' as const }}>
               <SectionHeader label="Education" />
               <div style={{ display: 'flex', gap: 26, marginTop: 14 }}>
                 {education.map((edu: any, i: number) => (

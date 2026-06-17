@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 _MODEL = "claude-sonnet-4-6"
 _COVER_LETTER_MODEL = "claude-haiku-4-5"
 
+# Template 8 (Adeel V2) uses a uniform 4 bullets per role in one-page mode (per request),
+# unlike the default 3-recent / 2-older taper.
+_ADEELV2_TEMPLATE_ID = 8
+
 # Anthropic client resilience: the SDK retries 429/5xx/529 with exponential backoff
 # and jitter (respecting Retry-After) up to _MAX_RETRIES times, and gives up after
 # _TIMEOUT seconds per request. Bumped above the SDK default of 2 because tailoring
@@ -249,12 +253,13 @@ IMPORTANT for tools_list:
 - HARD CAP: never more than 6 tools — quality over quantity, only what the JD actually asks for
 - If the candidate's custom instructions ask for fewer tools or to remove the tools section entirely, honor it (return fewer items, or an empty array [] to drop the section)
 
-IMPORTANT for skills_list:
-- Each entry is a short individual skill label (2-4 words max) suitable for a badge/pill
-- Include the candidate's existing skills, PLUS JD skills the candidate has genuine familiarity, adjacent knowledge, or transferable experience with
+IMPORTANT for skills_list (this is the resume's main ATS keyword surface — be thorough):
+- Each entry is a short individual skill label (1-4 words) suitable for a badge/pill
+- Include the candidate's existing skills, PLUS every JD skill the candidate has genuine familiarity, adjacent knowledge, or transferable experience with
+- USE THE JD'S EXACT WORDING for each matched skill so automated screeners get a verbatim hit (e.g. write "RESTful APIs" not "REST", "CI/CD" not "pipelines", "React.js" not "React" if that is how the JD writes it). Mirror the job description's exact spelling, casing, and phrasing.
+- ALSO include the key tools/technologies from tools_list here by name (e.g. "WordPress", "Figma", "Docker"). Some templates show tools only as icons, so repeating the tool NAMES here as text is what makes them readable to applicant tracking systems. (Yes, intentionally repeat the tools_list names in skills_list.)
 - INCLUSION RULE: include a JD skill if the candidate has real or closely transferable exposure to it. Do NOT list a technology the candidate has never encountered just because the JD names it — that belongs in keywords_missing.
-- Do NOT repeat items that are already in tools_list
-- Maximum 20 items
+- Maximum 28 items — prefer covering more genuine JD-relevant keywords over brevity
 
 IMPORTANT for key_achievements:
 - If the candidate has listed key_achievements in their profile, tailor them to be relevant to this role
@@ -501,7 +506,7 @@ def _resume_to_text(data: dict) -> str:
 
 def _build_tailored_resume_data(
     original: dict, claude_result: dict, allow_section_clearing: bool = False,
-    one_page: bool = False,
+    one_page: bool = False, template_id: Optional[int] = None,
 ) -> dict:
     """
     Merge Claude's tailored content into the resume structure.
@@ -607,9 +612,12 @@ def _build_tailored_resume_data(
     # Skills are intentionally NOT capped (only tools are) — the PDF auto-fit
     # scale guarantees one page even with a full pill wall.
     if one_page:
+        # AdeelV2 (template 8) keeps a uniform 4 bullets per role; others taper 3/2.
+        adeelv2 = template_id == _ADEELV2_TEMPLATE_ID
         for idx, exp in enumerate(tailored.get("experience", [])):
             if isinstance(exp.get("bullets"), list):
-                exp["bullets"] = exp["bullets"][: (3 if idx < 2 else 2)]
+                cap = 4 if adeelv2 else (3 if idx < 2 else 2)
+                exp["bullets"] = exp["bullets"][:cap]
         if isinstance(tailored.get("tools_list"), list):
             tailored["tools_list"] = tailored["tools_list"][:6]
         if isinstance(tailored.get("summary"), str):
@@ -904,10 +912,10 @@ def _first_n_sentences(text: str, n: int) -> str:
     return " ".join(parts[:n]).strip()
 
 
-def _recency_weighting_block(recent_roles: Optional[list], one_page: bool = False, jd_title: str = "") -> str:
+def _recency_weighting_block(recent_roles: Optional[list], one_page: bool = False, jd_title: str = "", template_id: Optional[int] = None) -> str:
     """
     Build the recency-weighting directive: the 2 most recent roles get bullets
-    rewritten ~80% toward the JD (JD-max but truthful); ONLY the single most recent
+    rewritten ~90% toward the JD (JD-max but truthful); ONLY the single most recent
     role also gets a JD-aligned title and the "As a {role}, ..." first bullet
     (doing it on both read as repetitive). Older roles stay ~80% original.
     """
@@ -926,7 +934,7 @@ def _recency_weighting_block(recent_roles: Optional[list], one_page: bool = Fals
         "\n\n## Recency Weighting (IMPORTANT)"
         "\nThe candidate's experience is listed most recent first."
         f"\n\nTHE 2 MOST RECENT ROLES: rewrite the bullets of EACH of these two roles with the SAME strength"
-        " (do not make the second one weaker) so that roughly 80% of the content reflects THIS job"
+        " (do not make the second one weaker) so that roughly 90% of the content reflects THIS job"
         " description — lead with the JD's exact stack, tools, and keywords; reframe the candidate's genuine"
         " and transferable experience into the JD's vocabulary; cover as many JD requirements as the candidate"
         " plausibly supports. You may rewrite all of their bullets to align with the JD."
@@ -953,6 +961,9 @@ def _recency_weighting_block(recent_roles: Optional[list], one_page: bool = Fals
         f"\n</example>"
         "\n\nKEEP OLDER ROLES MOSTLY ORIGINAL. For every role AFTER the first two:"
         + (
+            "\n- Use exactly 4 bullets (one-page mode for this template), ordered most important first,"
+            " preserving their original substance and focus."
+            if (one_page and template_id == _ADEELV2_TEMPLATE_ID) else
             "\n- Keep only the 2 most representative, highest impact original bullets (one-page mode),"
             " ordering them most important first, and preserve their original substance and focus."
             if one_page else
@@ -979,7 +990,7 @@ def _call_claude_resume(
     prompt = _RESUME_PROMPT.format(
         title=job.get("title", ""),
         company=job.get("company", ""),
-        description=(job.get("description") or "")[:6000],
+        description=(job.get("description") or "")[:12000],  # raised so keywords late in long JDs aren't dropped
         resume_text=resume_text[:5000],
         profile_context=profile_context,
     )
@@ -992,21 +1003,27 @@ def _call_claude_resume(
     if template_id and template_id in _TEMPLATE_HINTS:
         prompt += f"\n\n## Layout Instructions\n{_TEMPLATE_HINTS[template_id]}"
 
-    # ── Recency weighting: recent 2 roles ~80% JD, JD-aligned title + first bullet ──
+    # ── Recency weighting: recent 2 roles ~90% JD, JD-aligned title + first bullet ──
     prompt += _recency_weighting_block(
-        recent_roles, one_page=bool(one_page), jd_title=job.get("title", "")
+        recent_roles, one_page=bool(one_page), jd_title=job.get("title", ""), template_id=template_id
     )
 
     safe_custom_prompt = _sanitize_custom_prompt(custom_prompt)
     if safe_custom_prompt:
         prompt += _fence_resume_directives(safe_custom_prompt)
     if one_page:
+        # AdeelV2 (template 8) gets a uniform 4 bullets per role; other templates taper 3/2.
+        bullets_rule = (
+            "\n- EVERY experience entry: exactly 4 bullets each."
+            if template_id == _ADEELV2_TEMPLATE_ID else
+            "\n- The 2 most recent roles: AT MOST 3 bullets each. All older roles: AT MOST 2 bullets each."
+        )
         prompt += (
             "\n\n## One-Page Constraint (STRICT — do not ignore)"
             "\nThis resume MUST fit on ONE printed page, but KEEP ALL of the candidate's experiences"
             " (never drop a role — only shorten each one). Hard limits:"
             "\n- Keep EVERY experience entry. Do not remove any role."
-            "\n- The 2 most recent roles: AT MOST 3 bullets each. All older roles: AT MOST 2 bullets each."
+            + bullets_rule +
             "\n- Summary: exactly 2 sentences."
             "\n- tools_list: AT MOST 6 items. skills_list is NOT capped, keep it complete."
             "\n- When trimming, keep the highest impact, most JD relevant bullets, ordered most important first."
@@ -1149,6 +1166,7 @@ def tailor_for_job(
         profile_resume_data, claude_result,
         allow_section_clearing=bool(custom_prompt),
         one_page=one_page,
+        template_id=template_id,
     )
 
     # ── Override contact fields from manual form ──────────────────────────────

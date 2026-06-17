@@ -199,7 +199,7 @@ uvicorn app.main:app --reload --app-dir backend
 ### 5. Install and start the frontend
 
 ```bash
-cd frontend
+cd frontend 
 npm install
 npm run dev
 ```

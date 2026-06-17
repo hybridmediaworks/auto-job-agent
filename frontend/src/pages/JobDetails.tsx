@@ -266,7 +266,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
   <style>
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; box-sizing: border-box; }
     @page { size: A4 portrait; margin: 10mm 0; }
-    @page :first { margin-top: 0; margin-bottom: 10mm; }
+    @page :first { margin: 0; }
     html, body { margin: 0; padding: 0; background: white; }
   </style>
 </head>

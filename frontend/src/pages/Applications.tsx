@@ -38,7 +38,7 @@ function openPdfPrintWindow(html: string, name: string, jobTitle: string, onePag
   const safeJob = jobTitle.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 40)
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${safeName}_${safeJob}</title>
 <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;700&family=Montserrat:wght@300;400;500;600;700;900&family=Open+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-<style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}@page{size:A4 portrait;margin:10mm 0}@page :first{margin-top:0;margin-bottom:10mm}html,body{margin:0;padding:0;background:white}</style>
+<style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box}@page{size:A4 portrait;margin:10mm 0}@page :first{margin:0}html,body{margin:0;padding:0;background:white}</style>
 </head><body><div id="__fit" style="transform-origin:top left">${html}</div><script>window.onload=function(){setTimeout(function(){${onePageFitScript(onePage)}window.print()},800)}<\/script></body></html>`)
   win.document.close()
 }

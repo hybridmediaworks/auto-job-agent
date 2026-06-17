@@ -127,7 +127,7 @@ export function WaleedV2Template({ data, photo }: TemplateProps) {
         <div style={{ width: '1.5px', background: '#9ca3af', flexShrink: 0, alignSelf: 'stretch' }} />
 
         {/* Right Column */}
-        <div style={{ flex: 1, paddingLeft: 26 }}>
+        <div style={{ flex: 1, paddingLeft: 26, paddingRight: 26 }}>
 
           {experience.length > 0 && (
             <div style={{ marginBottom: 20 }}>
