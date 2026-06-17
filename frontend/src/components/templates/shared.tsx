@@ -130,16 +130,15 @@ export function PortfolioGrid({ images, gap = 5, borderRadius = 4 }: { images: s
               aspectRatio: span2 ? '16 / 9' : cellAspect,
               overflow: 'hidden',
               borderRadius,
-              background: '#f1f5f9',
+              // Render the image as a CSS background so a broken/missing URL degrades to a
+              // clean gray tile (no broken-image icon, no leaked alt text).
+              backgroundColor: '#f1f5f9',
+              backgroundImage: `url("${img}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
             }}
-          >
-            <img
-              src={img}
-              crossOrigin="anonymous"
-              alt="Project"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' as const, display: 'block' }}
-            />
-          </div>
+          />
         )
       })}
     </div>

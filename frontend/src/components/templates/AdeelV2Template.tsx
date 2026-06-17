@@ -1,4 +1,4 @@
-import { ensureUrl, cleanText, resolveTools, ToolIconBox, nonEmpty } from './shared'
+import { ensureUrl, cleanText, resolveTools, ToolIconBox, PortfolioGrid, nonEmpty } from './shared'
 import type { TemplateProps } from './shared'
 
 /**
@@ -111,15 +111,7 @@ export function AdeelV2Template({ data, photo: _photo }: TemplateProps) {
           {data.portfolio_images && data.portfolio_images.length > 0 && (
             <div style={{ marginBottom: 24, breakInside: 'avoid' as const, pageBreakInside: 'avoid' as const }}>
               <SectionHeader label="Portfolio:" sparkle />
-              {/* Single compact row of thumbnails (object-fit: cover preserves each image's
-                  aspect ratio, just crops) — keeps the sidebar within one page. */}
-              <div style={{ display: 'flex', gap: 6 }}>
-                {data.portfolio_images.slice(0, 4).map((src: string, i: number) => (
-                  <div key={i} style={{ flex: 1, height: 54, overflow: 'hidden', borderRadius: 4 }}>
-                    <img src={src} crossOrigin="anonymous" alt={`Portfolio ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' as const, display: 'block' }} />
-                  </div>
-                ))}
-              </div>
+              <PortfolioGrid images={data.portfolio_images} />
             </div>
           )}
 
