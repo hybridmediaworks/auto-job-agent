@@ -173,8 +173,8 @@ YEARS OF EXPERIENCE ALIGNMENT:
 
 Return ONLY this JSON:
 {{
-  "summary": "<2-3 sentences, FIRST PERSON. Start with 'I' — what you specialize in, your years of experience, what you bring to this specific role. No generic phrases.>",
-  "role_title": "<exact job title from the job description>",
+  "summary": "<2-3 sentences, FIRST PERSON. Start with 'I'. Sentence 1 MUST front load the target job title written exactly as in the JD AND your 3 to 4 most important JD hard skills or tools by their exact JD wording, then your years of experience and what you bring to THIS role. Weave the keywords into natural prose that reads like a real person wrote it, not a keyword list, and only for skills you genuinely have. No generic phrases.>",
+  "role_title": "<the target job title copied VERBATIM from the JD posting title, exact spelling and casing. This is the single highest weight ATS signal, so mirror the posting title word for word; do not paraphrase, abbreviate, or reorder words.>",
   "role_description": "<2-3 sentences, FIRST PERSON, describing what you will do in this role. Use JD vocabulary. 'In this role, I will...' style. Not bullet points.>",
   "skills_bullets": [
     "<skill bullet 1 — comma-separated list of related skills, lead with what this job needs most>",
@@ -237,7 +237,8 @@ Return ONLY this JSON:
 IMPORTANT for tailored_experience:
 - Rewrite EVERY bullet point using the Google XYZ formula: "Accomplished [X] as measured by [Y], by doing [Z]".
 - COVER GENUINE JD TECH: For every technology, framework, and tool named in the JD that the candidate genuinely has (or has closely transferable) experience with, make it appear by exact name in at least one bullet across the experience entries. Do NOT force-fit technologies the candidate has never used and has no adjacent experience for — those belong in keywords_missing, not in the bullets.
-- USE THE EMPLOYER'S VOCABULARY for real experience: when the candidate's genuine work maps to a JD technology, describe it using the JD's exact terminology rather than a synonym (e.g. if the JD says React.js and the candidate has real component-based JavaScript/React work, write "React.js component-based development", not "React-style").
+- REINFORCE THE TOP PRIORITY KEYWORDS ACROSS SECTIONS: the handful of MOST important JD hard skills the candidate genuinely has (the ones the JD repeats or lists as required) should each appear in roughly 3 to 4 places TOTAL across the whole resume, counting the summary, the skills_list, and the experience bullets together. Spread them naturally across the two most recent roles rather than repeating one term many times in a single bullet. Once a keyword has appeared about 3 to 4 times, STOP using it; extra repetition adds no ATS score and reads as stuffing to a human.
+- USE THE EMPLOYER'S VOCABULARY for real experience: when the candidate's genuine work maps to a JD technology, describe it using the JD's EXACT terminology, spelling, and casing rather than a synonym (e.g. if the JD says React.js and the candidate has real component-based JavaScript/React work, write "React.js component-based development", not "React-style"). On first mention in a bullet, pair an acronym with its full form once, e.g. "Continuous Integration and Continuous Delivery (CI/CD)".
 - NO DECEPTIVE HEDGING, NO INVENTION: do not pad bullets with vague "compatible with" / "inspired by" filler, and equally do not assert hands-on use of a named framework the candidate has never touched. State real and transferable experience directly and confidently; omit what is not real.
 - CONCENTRATE JD TECH IN THE 2 MOST RECENT ROLES (see the Recency Weighting section below): the two most recent roles should carry the bulk of the JD's required stack and keywords. Older roles keep their original focus and only mention JD tech that genuinely applied there.
 - Generate 4 to 6 bullets per role BY DEFAULT, unless the candidate's custom instructions specify a different number (then use exactly that number).
@@ -257,9 +258,12 @@ IMPORTANT for skills_list (this is the resume's main ATS keyword surface — be 
 - Each entry is a short individual skill label (1-4 words) suitable for a badge/pill
 - Include the candidate's existing skills, PLUS every JD skill the candidate has genuine familiarity, adjacent knowledge, or transferable experience with
 - USE THE JD'S EXACT WORDING for each matched skill so automated screeners get a verbatim hit (e.g. write "RESTful APIs" not "REST", "CI/CD" not "pipelines", "React.js" not "React" if that is how the JD writes it). Mirror the job description's exact spelling, casing, and phrasing.
+- PAIR ACRONYMS WITH THEIR SPELLED OUT FORM the first time a skill is an acronym, as a single combined label, e.g. "Search Engine Optimization (SEO)", "Continuous Integration and Continuous Delivery (CI/CD)", "Amazon Web Services (AWS)". This one label scores a hit on BOTH the acronym search and the full phrase search on exact match systems that treat them as different tokens. Do this only for genuine skills.
+- NO DUPLICATES OR NEAR DUPLICATES: list each skill exactly ONCE. Do NOT include two labels that mean the same thing (e.g. never both "React.js" and "React", never list "TypeScript" twice, never both "REST" and "RESTful APIs"). When the candidate's wording and the JD's wording overlap, keep the SINGLE JD spelling and drop the other. Repeated or redundant skills add no ATS value past the density ceiling and clutter the human read.
 - ALSO include the key tools/technologies from tools_list here by name (e.g. "WordPress", "Figma", "Docker"). Some templates show tools only as icons, so repeating the tool NAMES here as text is what makes them readable to applicant tracking systems. (Yes, intentionally repeat the tools_list names in skills_list.)
 - INCLUSION RULE: include a JD skill if the candidate has real or closely transferable exposure to it. Do NOT list a technology the candidate has never encountered just because the JD names it — that belongs in keywords_missing.
-- Maximum 28 items — prefer covering more genuine JD-relevant keywords over brevity
+- END THE LIST WITH 2 TO 3 ROLE RELEVANT SOFT SKILLS as the last items — a SHORT tail that reinforces the soft skills you demonstrated in the recent roles' soft skills bullet — phrased as the noun forms recruiters actually search (e.g. "Cross functional Collaboration", "Stakeholder Communication", "Mentorship"). Choose soft skills the JD actually emphasizes and avoid empty buzzwords like "hard working", "team player", or "detail oriented". The hard skills and tools still come FIRST and make up the bulk of the list, so soft skills never displace the high value front of the section.
+- Maximum 28 items including the soft skill tail — prefer covering more genuine JD-relevant keywords over brevity, and after de-duplication never pad the list with redundant variants just to reach the cap
 
 IMPORTANT for key_achievements:
 - If the candidate has listed key_achievements in their profile, tailor them to be relevant to this role
@@ -615,15 +619,26 @@ def _build_tailored_resume_data(
         # AdeelV2 (template 8) keeps a uniform 4 bullets per role; others taper 3/2.
         adeelv2 = template_id == _ADEELV2_TEMPLATE_ID
         for idx, exp in enumerate(tailored.get("experience", [])):
-            if isinstance(exp.get("bullets"), list):
+            bullets = exp.get("bullets")
+            if isinstance(bullets, list):
                 cap = 4 if adeelv2 else (3 if idx < 2 else 2)
-                exp["bullets"] = exp["bullets"][:cap]
+                if idx < 2 and len(bullets) > cap:
+                    # The 2 recent roles end with a soft-skills bullet — keep the first
+                    # cap-1 JD bullets PLUS that trailing soft bullet, so trimming never
+                    # drops it even if Claude over-produced bullets.
+                    exp["bullets"] = bullets[: cap - 1] + bullets[-1:]
+                else:
+                    exp["bullets"] = bullets[:cap]
         if isinstance(tailored.get("tools_list"), list):
             tailored["tools_list"] = tailored["tools_list"][:6]
         if isinstance(tailored.get("summary"), str):
             tailored["summary"] = _first_n_sentences(tailored["summary"], 2)
 
     _clean_dashes_in_resume_data(tailored)
+    # Collapse duplicate / near-duplicate skill labels (e.g. React.js vs React, a
+    # skill listed twice) — deterministic safety net behind the prompt's no-duplicates rule.
+    if isinstance(tailored.get("skills_list"), list):
+        tailored["skills_list"] = _dedupe_skills(tailored["skills_list"])
     return tailored
 
 
@@ -898,6 +913,33 @@ def _coerce_str_list(value) -> list:
     return [str(item).strip() for item in value if item is not None and str(item).strip()]
 
 
+def _dedupe_skills(skills: list) -> list:
+    """
+    Drop duplicate / near-duplicate skill labels, preserving first-seen order.
+
+    Deterministic safety net behind the prompt's no-duplicates rule. Normalizes
+    case, internal whitespace, and a trailing ".js" so "React.js" and "React" (or
+    "TypeScript" listed twice) collapse to one entry. Keeps the FIRST occurrence's
+    exact wording — the prompt makes that the JD-exact spelling, which is what ATS
+    should match.
+    """
+    seen: set = set()
+    out: list = []
+    for item in skills:
+        if not isinstance(item, str):
+            continue
+        label = item.strip()
+        if not label:
+            continue
+        key = re.sub(r"\s+", " ", label.lower())
+        key = re.sub(r"\.js$", "", key).strip()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(label)
+    return out
+
+
 def _first_n_sentences(text: str, n: int) -> str:
     """
     Return the first n sentences of text (used to hard-trim the summary in one-page mode).
@@ -938,6 +980,16 @@ def _recency_weighting_block(recent_roles: Optional[list], one_page: bool = Fals
         " description — lead with the JD's exact stack, tools, and keywords; reframe the candidate's genuine"
         " and transferable experience into the JD's vocabulary; cover as many JD requirements as the candidate"
         " plausibly supports. You may rewrite all of their bullets to align with the JD."
+        "\n\nSOFT SKILLS BULLET (both of the 2 most recent roles): make the LAST bullet of EACH of these"
+        " two roles a soft skills bullet that shows a role relevant soft skill IN CONTEXT through an action"
+        " and an outcome, never as a bare label. Draw on the soft skills the JD emphasizes, for example"
+        " mentoring engineers through code reviews and technical guidance, cross functional collaboration"
+        " with product, design, and business stakeholders, or agile delivery from concept through deployment."
+        " Keep it TRUTHFUL and appropriate to the seniority of that role (never claim mentoring, leadership,"
+        " or team scope for a junior or solo role; if a role does not support it, write a normal bullet"
+        " instead). Vary the wording between the two roles and across different resumes; never reuse a stock"
+        " sentence. This bullet COUNTS as one of the role's bullets and must obey the per role bullet limits"
+        " below; it does NOT add an extra bullet."
         f"\n\nONLY THE SINGLE MOST RECENT ROLE{first} additionally gets:"
         f"\n- TITLE: set this role's \"title\" to the target role from the JD ({target}), keeping the"
         " candidate's ORIGINAL seniority level (do not inflate — if the original title was not Senior/Lead,"

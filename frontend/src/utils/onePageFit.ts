@@ -18,14 +18,17 @@ export function onePageFitScript(onePage: boolean): string {
   // usable first-page height at 96dpi is the full A4 = ~1122px. Pages 2+ keep 10mm
   // top+bottom margins ≈ 1047px usable.
   if (onePage) {
-    // One-page mode: templates fill to the full page, so content at or under ~1122
-    // already fits exactly one page — only scale on genuine overflow. Scale about
-    // top-CENTER so any shrink reads as a centered margined document, not right-only white.
+    // One-page mode: content at or under ~1122 already fits exactly one page, so we
+    // only act on genuine overflow. When it overflows we scale on the Y axis ONLY
+    // (scaleY) to fit the page HEIGHT while KEEPING the full 794px width — this fills
+    // the page edge-to-edge with NO white side margins. A uniform scale() shrinks the
+    // width too and leaves the symmetric side "padding"; scaleY trades that padding for
+    // a small vertical compression instead. Origin top-left keeps the top edge flush.
     return (
       "try{var __f=document.getElementById('__fit');var __e=__f&&__f.firstElementChild;" +
       "if(__e){var __t=1122;var __p=1118;var __h=__e.scrollHeight;" +
-      "if(__h>__t){var __s=__p/__h;__e.style.transformOrigin='top center';" +
-      "__e.style.transform='scale('+__s+')';__f.style.height=__p+'px';__f.style.overflow='hidden';}}}catch(e){}"
+      "if(__h>__t){var __s=__p/__h;__e.style.transformOrigin='top left';" +
+      "__e.style.transform='scaleY('+__s+')';__f.style.height=__p+'px';__f.style.overflow='hidden';}}}catch(e){}"
     )
   }
   // Multi-page mode: stretch the template ROOT to the exact bottom of the last
