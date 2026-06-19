@@ -19,7 +19,25 @@ export function WaqarTemplate({ data, photo }: TemplateProps) {
   const keyAchievements: string[] = data.key_achievements || []
   const languages: any[] = data.languages || []
   const projects: any[] = data.projects || []
-  const allSkills = [...skills, ...tools]
+  // Merge skills + tools for the chip grid, dropping case/".js"/acronym duplicates:
+  // tool names are intentionally also placed in skills_list for ATS, and this is the
+  // one template that shows both lists together, so without this they render twice
+  // (e.g. "Docker" twice, or "Amazon Web Services (AWS)" plus a bare "AWS").
+  const allSkills = (() => {
+    const seen = new Set<string>()
+    const norm = (s: string) => (s || '').trim().toLowerCase().replace(/\.js$/, '')
+    return [...skills, ...tools].filter((s) => {
+      const label = (s || '').trim()
+      if (!label) return false
+      const key = norm(label)
+      const acro = label.match(/\(([^)]+)\)\s*$/)   // trailing "(AWS)" -> also reserve "aws"
+      const acroKey = acro ? norm(acro[1]) : ''
+      if (seen.has(key) || (acroKey && seen.has(acroKey))) return false
+      seen.add(key)
+      if (acroKey) seen.add(acroKey)
+      return true
+    })
+  })()
   const effectivePhoto = photo || data.photo
 
   const initials = (() => {
