@@ -153,6 +153,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
   const [result, setResult] = useState<TailoredApplication | null>(null)
   const [showCustomPrompt, setShowCustomPrompt] = useState(false)
   const [customPrompt, setCustomPrompt] = useState('')
+  const [mustHaveKeywords, setMustHaveKeywords] = useState('')
   const [useTemplate, setUseTemplate] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState(1)
   const [onePage, setOnePage] = useState(false)
@@ -195,6 +196,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
   const mutation = useMutation({
     mutationFn: () => {
       setProgressStep('resume')
+      const mustHave = mustHaveKeywords.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
       return tailorApi.generatePreview(
         jobId,
         selectedProfileId,
@@ -203,6 +205,7 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
         onePage,
         tone || undefined,
         focusAreas.length > 0 ? focusAreas : undefined,
+        mustHave.length ? mustHave : undefined,
       )
     },
     onSuccess: (data) => {
@@ -624,6 +627,20 @@ function TailorPanel({ jobId, hasDescription, jobTitle, isManual = false }: { jo
               </div>
             )
           })()}
+        </div>
+
+        {/* Must-have keywords — guaranteed into skills + experience, never dropped */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Must-Have Keywords (optional)</label>
+          <textarea
+            value={mustHaveKeywords}
+            onChange={e => setMustHaveKeywords(e.target.value)}
+            placeholder={"Comma or line separated keywords the resume MUST include, e.g.:\nReact.js, TypeScript, GraphQL, AWS, CI/CD"}
+            className="w-full text-sm border rounded-xl p-3 resize-y placeholder:leading-relaxed"
+            style={{ background: 'var(--bg-input)', borderColor: 'var(--border-default)', color: 'var(--text-input)', minHeight: '72px' }}
+            rows={3}
+          />
+          <p className="text-xs" style={{ color: 'var(--text-faint)' }}>Every keyword here is guaranteed to appear in both the Skills section and the experience bullets — none is ever dropped.</p>
         </div>
 
         {/* 1-page toggle */}

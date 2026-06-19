@@ -40,6 +40,7 @@ class TailorRequest(BaseModel):
     one_page: bool = False              # Inject strict 1-page brevity constraint
     tone: Optional[str] = None          # Professional | Technical | Enthusiastic
     focus_areas: Optional[List[str]] = None  # e.g. ['Architecture', 'Leadership']
+    must_have_keywords: Optional[List[str]] = None  # keywords guaranteed into skills + experience
 
 
 class TailorSaveRequest(BaseModel):
@@ -212,6 +213,7 @@ async def tailor_job(
             one_page=body.one_page,
             tone=body.tone,
             focus_areas=body.focus_areas,
+            must_have_keywords=body.must_have_keywords,
         )
     except Exception as exc:
         raise HTTPException(
@@ -501,6 +503,7 @@ class ManualTailorRequest(BaseModel):
     tone: Optional[str] = None
     focus_areas: Optional[List[str]] = None
     one_page: bool = False
+    must_have_keywords: Optional[List[str]] = None  # keywords guaranteed into skills + experience
 
 
 @manual_router.post("/manual", response_model=TailoredApplicationOut)
@@ -570,6 +573,7 @@ async def manual_tailor(
             focus_areas=body.focus_areas,
             location_override=body.location or None,
             address_override=body.address or None,
+            must_have_keywords=body.must_have_keywords,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Tailoring failed: {str(exc)}")

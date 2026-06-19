@@ -29,6 +29,11 @@ _COVER_LETTER_MODEL = "claude-haiku-4-5"
 # Template 8 (Adeel V2) uses a uniform 4 bullets per role in one-page mode (per request),
 # unlike the default 3-recent / 2-older taper.
 _ADEELV2_TEMPLATE_ID = 8
+_WALEEDV2_TEMPLATE_ID = 7  # "Mirza Waleed" template
+
+# Seniority qualifiers used to prevent the JD title-match from inflating a role's seniority.
+_SENIORITY_RE = re.compile(r"\b(senior|sr|lead|principal|staff|head)\b", re.IGNORECASE)
+_SENIORITY_LEAD_RE = re.compile(r"^\s*(senior|sr\.?|lead|principal|staff|head)\s+", re.IGNORECASE)
 
 # Anthropic client resilience: the SDK retries 429/5xx/529 with exponential backoff
 # and jitter (respecting Retry-After) up to _MAX_RETRIES times, and gives up after
@@ -236,7 +241,13 @@ Return ONLY this JSON:
 
 IMPORTANT for tailored_experience:
 - Rewrite EVERY bullet point using the Google XYZ formula: "Accomplished [X] as measured by [Y], by doing [Z]".
-- COVER GENUINE JD TECH: For every technology, framework, and tool named in the JD that the candidate genuinely has (or has closely transferable) experience with, make it appear by exact name in at least one bullet across the experience entries. Do NOT force-fit technologies the candidate has never used and has no adjacent experience for — those belong in keywords_missing, not in the bullets.
+- COVER EVERY JD TECHNOLOGY IN THE EXPERIENCE BULLETS (hard requirement): go through the ENTIRE job description and enumerate every programming language, framework, library, database, platform, tool, and technology it names. EACH one the candidate genuinely has OR has closely transferable / adjacent experience with MUST appear by its EXACT JD name in at least one EXPERIENCE bullet (not only in skills_list) — the experience section is the resume's most important ATS surface, so do not leave a genuinely supportable JD technology out of it. Pack related technologies into the same bullet where it reads naturally (one bullet may name several), and concentrate them in the 2 most recent roles. The ONLY technologies you may omit from the bullets are ones the candidate has truly never used and has no adjacent experience for — those go to keywords_missing. Never invent hands-on use of a technology the candidate has no genuine or transferable basis for.
+- PHRASE EACH TECH BY DEPTH OF EXPERIENCE (this keeps ATS coverage high AND keeps every claim interview-safe — the phrasing matters more than the tech choice):
+  > DIRECTLY used (the technology IS in the candidate's real skills or real experience bullets): use confident hands-on verbs — built, shipped, designed, integrated, automated.
+  > SAME-ECOSYSTEM but NOT directly used: still NAME the JD's exact term so the ATS matches it, but phrase it as TRANSFERABLE, never as hands-on delivery. Use framings like "using patterns transferable to {{X}}", "with approaches consistent with {{X}}", or "aligned to {{X}} conventions". NEVER write "built / introduced / integrated / shipped {{X}}" for a tool the candidate did not directly use. Accepted same-ecosystem adjacencies: JavaScript -> TypeScript; React -> Next.js; CSS -> Tailwind CSS; Node.js or Express -> NestJS; one relational database -> another relational database (MySQL or SQL -> PostgreSQL); REST API design -> GraphQL; generic automated tests -> Jest.
+  > NO genuine basis at all (a different CATEGORY or domain the candidate never worked in): do NOT name it in any bullet — put it in keywords_missing. A persistent database does NOT cover an in-memory cache (Redis) or a message queue (Kafka); application development does NOT cover infrastructure or platform ops (Kubernetes, Terraform); generic automated tests do NOT cover a specific end to end framework the candidate never used (Cypress) unless written as "approaches consistent with Cypress".
+  Rule of thumb: every technology named in a bullet must survive an interviewer asking "walk me through how you used it" — confident claims ONLY for genuine hands-on work, transferable phrasing for same-ecosystem adjacencies, and nothing named that the candidate has no real basis for.
+  BE CONSISTENT ACROSS ALL ROLES: if a technology gets transferable phrasing in one role, it must use transferable phrasing in EVERY role — never assert it as direct hands-on in one role while hedging it in another. This applies even to the closest adjacencies: TypeScript (from JavaScript) and Jest (from generic automated tests) are NOT in this candidate's real toolset unless their profile names them, so phrase them too as "patterns consistent with TypeScript" / "approaches consistent with Jest", never as "applying TypeScript throughout the codebase" or "integrating Jest test suites".
 - REINFORCE THE TOP PRIORITY KEYWORDS ACROSS SECTIONS: the handful of MOST important JD hard skills the candidate genuinely has (the ones the JD repeats or lists as required) should each appear in roughly 3 to 4 places TOTAL across the whole resume, counting the summary, the skills_list, and the experience bullets together. Spread them naturally across the two most recent roles rather than repeating one term many times in a single bullet. Once a keyword has appeared about 3 to 4 times, STOP using it; extra repetition adds no ATS score and reads as stuffing to a human.
 - USE THE EMPLOYER'S VOCABULARY for real experience: when the candidate's genuine work maps to a JD technology, describe it using the JD's EXACT terminology, spelling, and casing rather than a synonym (e.g. if the JD says React.js and the candidate has real component-based JavaScript/React work, write "React.js component-based development", not "React-style"). On first mention in a bullet, pair an acronym with its full form once, e.g. "Continuous Integration and Continuous Delivery (CI/CD)".
 - NO DECEPTIVE HEDGING, NO INVENTION: do not pad bullets with vague "compatible with" / "inspired by" filler, and equally do not assert hands-on use of a named framework the candidate has never touched. State real and transferable experience directly and confidently; omit what is not real.
@@ -512,6 +523,7 @@ def _resume_to_text(data: dict) -> str:
 def _build_tailored_resume_data(
     original: dict, claude_result: dict, allow_section_clearing: bool = False,
     one_page: bool = False, template_id: Optional[int] = None,
+    must_have_keywords: Optional[list] = None,
 ) -> dict:
     """
     Merge Claude's tailored content into the resume structure.
@@ -613,16 +625,36 @@ def _build_tailored_resume_data(
         if new_title:
             exp["title"] = new_title
 
+    # ── Seniority guard: the most-recent role's JD-aligned title must NOT add a seniority
+    # level the original title didn't have (e.g. "Software Engineer" must not become "Senior
+    # Full Stack Engineer"). Deterministic backstop behind the prompt's no-inflate rule.
+    texp = tailored.get("experience", [])
+    oexp = original.get("experience", [])
+    if texp and oexp:
+        new_t = texp[0].get("title") or ""
+        orig_t = oexp[0].get("title") or ""
+        if _SENIORITY_RE.search(new_t) and not _SENIORITY_RE.search(orig_t):
+            stripped = _SENIORITY_LEAD_RE.sub("", new_t).strip()
+            if stripped:
+                texp[0]["title"] = stripped
+
     # ── Strict one-page caps: KEEP every experience, just trim each one.
     # Skills are intentionally NOT capped (only tools are) — the PDF auto-fit
     # scale guarantees one page even with a full pill wall.
     if one_page:
-        # AdeelV2 (template 8) keeps a uniform 4 bullets per role; others taper 3/2.
+        # AdeelV2 (template 8): 5 bullets on the 2 recent roles, 4 on older roles — fills
+        # the one-page layout nicely. Other templates taper 3/2.
         adeelv2 = template_id == _ADEELV2_TEMPLATE_ID
         for idx, exp in enumerate(tailored.get("experience", [])):
             bullets = exp.get("bullets")
             if isinstance(bullets, list):
-                cap = 4 if adeelv2 else (3 if idx < 2 else 2)
+                if adeelv2:
+                    cap = 5 if idx < 2 else 4
+                elif template_id == _WALEEDV2_TEMPLATE_ID:
+                    # Mirza Waleed: one extra bullet on the MOST RECENT role only.
+                    cap = 4 if idx == 0 else (3 if idx == 1 else 2)
+                else:
+                    cap = 3 if idx < 2 else 2
                 if idx < 2 and len(bullets) > cap:
                     # The 2 recent roles end with a soft-skills bullet — keep the first
                     # cap-1 JD bullets PLUS that trailing soft bullet, so trimming never
@@ -634,6 +666,32 @@ def _build_tailored_resume_data(
             tailored["tools_list"] = tailored["tools_list"][:6]
         if isinstance(tailored.get("summary"), str):
             tailored["summary"] = _first_n_sentences(tailored["summary"], 2)
+
+    # ── Must-have keywords: GUARANTEE every user-specified keyword appears in BOTH the
+    # skills_list AND an experience bullet — deterministic backstop so none is ever missed
+    # (the prompt asks Claude to integrate them naturally; this catches anything it dropped).
+    if must_have_keywords:
+        _mh = [str(k).strip() for k in must_have_keywords if str(k).strip()]
+        if _mh:
+            sk = tailored.get("skills_list")
+            sk = sk if isinstance(sk, list) else []
+            sk_join = " ".join(str(s) for s in sk)
+            for kw in _mh:
+                if not _kw_present(kw, sk_join):
+                    sk.append(kw)
+                    sk_join += " " + kw
+            tailored["skills_list"] = sk
+
+            exps = tailored.get("experience") or []
+            bullets_text = " ".join(
+                b for e in exps for b in (e.get("bullets") or []) if isinstance(b, str)
+            )
+            missed = [kw for kw in _mh if not _kw_present(kw, bullets_text)]
+            if missed and exps and isinstance(exps[0].get("bullets"), list):
+                joined = missed[0] if len(missed) == 1 else (
+                    ", ".join(missed[:-1]) + ", and " + missed[-1]
+                )
+                exps[0]["bullets"].append("Applied " + joined + " across recent production work.")
 
     _clean_dashes_in_resume_data(tailored)
     # Collapse duplicate / near-duplicate skill labels (e.g. React.js vs React, a
@@ -941,6 +999,19 @@ def _dedupe_skills(skills: list) -> list:
     return out
 
 
+def _kw_present(kw: str, text: str) -> bool:
+    """
+    True if `kw` appears in `text` as a standalone token (case-insensitive).
+
+    Uses non-alphanumeric boundaries instead of \\b so symbol-bearing tech terms match
+    correctly ("React.js", "CI/CD", "C++", "Node.js") while "Java" does NOT match inside
+    "JavaScript". Used to guarantee must-have keyword coverage without false positives.
+    """
+    if not kw or not text:
+        return False
+    return re.search(r"(?<![A-Za-z0-9])" + re.escape(kw) + r"(?![A-Za-z0-9])", text, re.IGNORECASE) is not None
+
+
 def _first_n_sentences(text: str, n: int) -> str:
     """
     Return the first n sentences of text (used to hard-trim the summary in one-page mode).
@@ -992,12 +1063,17 @@ def _recency_weighting_block(recent_roles: Optional[list], one_page: bool = Fals
         " sentence. This bullet COUNTS as one of the role's bullets and must obey the per role bullet limits"
         " below; it does NOT add an extra bullet."
         f"\n\nONLY THE SINGLE MOST RECENT ROLE{first} additionally gets:"
-        f"\n- TITLE: set this role's \"title\" to the target role from the JD ({target}), keeping the"
-        " candidate's ORIGINAL seniority level (do not inflate — if the original title was not Senior/Lead,"
-        " do not add Senior/Lead). Keep it close and believable. Keep the company/employer unchanged."
-        f"\n- FIRST BULLET: the FIRST bullet of this role must open by naming the target role, e.g."
-        f" \"As a {target}, ...\" or \"Working as a {target}, ...\", then state a concrete achievement using"
-        " the JD's stack."
+        f"\n- TITLE: set this role's \"title\" to the JD target role ({target}), BUT match the candidate's"
+        " ORIGINAL seniority for this role. If the JD title carries a seniority word (Senior, Sr, Lead,"
+        " Principal, Staff, Head) that this role's ORIGINAL title did NOT have, you MUST DROP that word."
+        f" Example: original \"Software Engineer\" + JD \"{target}\" => use the JD role WITHOUT the added"
+        " seniority word (e.g. \"Full Stack Engineer\", NEVER \"Senior Full Stack Engineer\"). Never add a"
+        " seniority level the candidate did not already hold. Keep it close and believable; keep the"
+        " company/employer unchanged."
+        f"\n- FIRST BULLET: the FIRST bullet of this role must open by naming THIS ROLE'S ADJUSTED title"
+        " (the de-inflated title you set just above — NOT the raw JD title if you dropped a seniority"
+        " word), e.g. \"As a [adjusted title], ...\" or \"Working as a [adjusted title], ...\", then state"
+        " a concrete achievement using the JD's stack."
         f"\n\nTHE SECOND MOST RECENT ROLE{second} keeps its ORIGINAL title exactly, and its bullets must NOT"
         f" open with \"As a {target}\" phrasing — repeating the opener on two roles reads as artificial."
         " Its bullets still get the full 80% JD rewrite described above."
@@ -1038,6 +1114,7 @@ def _call_claude_resume(
     tone: Optional[str] = None,
     focus_areas: Optional[list] = None,
     recent_roles: Optional[list] = None,
+    must_have_keywords: Optional[list] = None,
 ) -> dict:
     """Call Claude to produce a tailored resume JSON in the company profile format."""
     prompt = _RESUME_PROMPT.format(
@@ -1055,6 +1132,19 @@ def _call_claude_resume(
         prompt += f"\n\n## Focus Areas\nEmphasize these areas: {', '.join(focus_areas)}."
     if template_id and template_id in _TEMPLATE_HINTS:
         prompt += f"\n\n## Layout Instructions\n{_TEMPLATE_HINTS[template_id]}"
+    if must_have_keywords:
+        _mh = [str(k).strip() for k in must_have_keywords if str(k).strip()]
+        if _mh:
+            prompt += (
+                "\n\n## Must-Have Keywords (MANDATORY — user specified, do not miss a single one)"
+                "\nThe user marked these keywords as REQUIRED: " + ", ".join(_mh) + "."
+                "\nEVERY one of them MUST appear, using this EXACT wording, in BOTH (1) the skills_list"
+                " AND (2) at least one EXPERIENCE bullet. Integrate each as naturally as possible into the"
+                " most relevant role. These are non-negotiable and OVERRIDE the transferable-phrasing"
+                " guidance above: include every one of them in the experience bullets even if you would"
+                " normally hedge or gap-list it. Never drop a single must-have keyword. (Frame genuinely"
+                " held ones with real hands-on detail; state the rest as plausibly as possible.)"
+            )
 
     # ── Recency weighting: recent 2 roles ~90% JD, JD-aligned title + first bullet ──
     prompt += _recency_weighting_block(
@@ -1065,12 +1155,23 @@ def _call_claude_resume(
     if safe_custom_prompt:
         prompt += _fence_resume_directives(safe_custom_prompt)
     if one_page:
-        # AdeelV2 (template 8) gets a uniform 4 bullets per role; other templates taper 3/2.
-        bullets_rule = (
-            "\n- EVERY experience entry: exactly 4 bullets each."
-            if template_id == _ADEELV2_TEMPLATE_ID else
-            "\n- The 2 most recent roles: AT MOST 3 bullets each. All older roles: AT MOST 2 bullets each."
-        )
+        # Per-template one-page bullet budgets. AdeelV2 (8): 5/5 then 4. Mirza Waleed (7):
+        # 4 on the most recent role, 3 on the second, then 2. Others taper 3/2.
+        if template_id == _ADEELV2_TEMPLATE_ID:
+            bullets_rule = (
+                "\n- BOTH the most recent role AND the second most recent role: exactly 5 bullets each"
+                " (generate a full 5 for EACH of the top two roles — do not give the second role fewer)."
+                "\n- All older roles (third onward): exactly 4 bullets each."
+            )
+        elif template_id == _WALEEDV2_TEMPLATE_ID:
+            bullets_rule = (
+                "\n- The MOST RECENT role: exactly 4 bullets. The second most recent role: exactly 3 bullets."
+                "\n- All older roles (third onward): AT MOST 2 bullets each."
+            )
+        else:
+            bullets_rule = (
+                "\n- The 2 most recent roles: AT MOST 3 bullets each. All older roles: AT MOST 2 bullets each."
+            )
         prompt += (
             "\n\n## One-Page Constraint (STRICT — do not ignore)"
             "\nThis resume MUST fit on ONE printed page, but KEEP ALL of the candidate's experiences"
@@ -1162,6 +1263,7 @@ def tailor_for_job(
     focus_areas: Optional[list] = None,
     location_override: Optional[str] = None,
     address_override: Optional[str] = None,
+    must_have_keywords: Optional[list] = None,
 ) -> dict:
     """
     Full tailoring pipeline: produce a job-targeted resume + cover letter.
@@ -1197,6 +1299,7 @@ def tailor_for_job(
         tone=tone,
         focus_areas=focus_areas,
         recent_roles=recent_roles,
+        must_have_keywords=must_have_keywords,
     )
 
     # ── Honest gap analysis from Claude (real JD-vs-resume comparison) ────────
@@ -1220,6 +1323,7 @@ def tailor_for_job(
         allow_section_clearing=bool(custom_prompt),
         one_page=one_page,
         template_id=template_id,
+        must_have_keywords=must_have_keywords,
     )
 
     # ── Override contact fields from manual form ──────────────────────────────

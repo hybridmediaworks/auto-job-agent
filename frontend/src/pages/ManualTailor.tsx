@@ -124,6 +124,7 @@ export default function ManualTailor() {
   const [tone, setTone] = useState<string>(draft?.tone ?? 'Professional')
   const [focusAreas, setFocusAreas] = useState<string[]>(draft?.focusAreas ?? [])
   const [customPrompt, setCustomPrompt] = useState<string>(draft?.customPrompt ?? '')
+  const [mustHaveKeywords, setMustHaveKeywords] = useState<string>(draft?.mustHaveKeywords ?? '')
   const [selectedProfileId, setSelectedProfileId] = useState<number | undefined>(draft?.selectedProfileId ?? undefined)
   const [useTemplate, setUseTemplate] = useState<boolean>(draft?.useTemplate ?? false)
   const [selectedTemplate, setSelectedTemplate] = useState<number>(draft?.selectedTemplate ?? 1)
@@ -138,10 +139,10 @@ export default function ManualTailor() {
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         title, company, location, url, description, address,
-        tone, focusAreas, customPrompt, selectedProfileId, useTemplate, selectedTemplate, onePage,
+        tone, focusAreas, customPrompt, mustHaveKeywords, selectedProfileId, useTemplate, selectedTemplate, onePage,
       }))
     } catch { /* storage full — silently skip */ }
-  }, [title, company, location, url, description, address, tone, focusAreas, customPrompt, selectedProfileId, useTemplate, selectedTemplate, onePage])
+  }, [title, company, location, url, description, address, tone, focusAreas, customPrompt, mustHaveKeywords, selectedProfileId, useTemplate, selectedTemplate, onePage])
 
   function clearForm() {
     setTitle(''); setCompany(''); setLocation(''); setUrl('')
@@ -188,6 +189,7 @@ export default function ManualTailor() {
     mutationFn: () => {
       setError(null)
       setProgressStep('resume')
+      const mustHave = mustHaveKeywords.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)
       return tailorApi.manualTailor({
         title: title.trim(),
         company: company.trim(),
@@ -197,6 +199,7 @@ export default function ManualTailor() {
         url: url.trim() || undefined,
         profile_id: selectedProfileId,
         custom_prompt: customPrompt.trim() || undefined,
+        must_have_keywords: mustHave.length ? mustHave : undefined,
         template_id: useTemplate ? selectedTemplate : undefined,
         tone,
         focus_areas: focusAreas.length > 0 ? focusAreas : undefined,
@@ -409,6 +412,21 @@ export default function ManualTailor() {
             />
             <p className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
               These instructions take priority over the defaults, while keeping the template intact.
+            </p>
+          </Field>
+
+          {/* Must-have keywords — guaranteed into skills + experience, never dropped */}
+          <Field label="Must-Have Keywords">
+            <textarea
+              value={mustHaveKeywords}
+              onChange={e => setMustHaveKeywords(e.target.value)}
+              placeholder={"Comma or line separated keywords the resume MUST include, e.g.:\nReact.js, TypeScript, GraphQL, AWS, CI/CD"}
+              rows={3}
+              className={`${inputClass} resize-y placeholder:leading-relaxed`}
+              style={{ ...inputStyle, minHeight: 72 }}
+            />
+            <p className="text-[11px]" style={{ color: 'var(--text-faint)' }}>
+              Every keyword here is guaranteed to appear in both the Skills section and the experience bullets — none is ever dropped.
             </p>
           </Field>
 

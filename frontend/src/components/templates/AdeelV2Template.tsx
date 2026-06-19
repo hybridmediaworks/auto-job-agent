@@ -45,7 +45,7 @@ export function AdeelV2Template({ data, photo: _photo }: TemplateProps) {
   return (
     <div style={{ width: 794, minHeight: 1122, fontFamily: I, background: '#ffffff', boxSizing: 'border-box' as const, display: 'flex', flexDirection: 'column' as const }}>
       {/* ── Purple header: name, title with flanking lines, contact row ── */}
-      <div style={{ background: PURPLE, padding: '4px 36px 11px 36px' }}>
+      <div style={{ background: PURPLE, padding: '22px 36px 13px 36px' }}>
         <div style={{ fontFamily: P, fontSize: 47, fontWeight: 700, color: YELLOW, textAlign: 'center' as const, lineHeight: 1.12 }}>{data.name}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 3 }}>
           <div style={{ width: 130, height: 1.5, background: '#ffffff' }} />

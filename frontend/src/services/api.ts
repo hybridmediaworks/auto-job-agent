@@ -343,6 +343,7 @@ export const tailorApi = {
     onePage?: boolean,
     tone?: string,
     focusAreas?: string[],
+    mustHaveKeywords?: string[],
   ): Promise<TailoredApplication> => {
     const response = await apiClient.post<TailoredApplication>(`/jobs/${jobId}/tailor`, {
       profile_id: profileId ?? null,
@@ -351,6 +352,7 @@ export const tailorApi = {
       one_page: onePage ?? false,
       tone: tone || null,
       focus_areas: focusAreas && focusAreas.length > 0 ? focusAreas : null,
+      must_have_keywords: mustHaveKeywords && mustHaveKeywords.length > 0 ? mustHaveKeywords : null,
     });
     return response.data;
   },
@@ -363,6 +365,7 @@ export const tailorApi = {
     onePage?: boolean,
     tone?: string,
     focusAreas?: string[],
+    mustHaveKeywords?: string[],
   ): Promise<TailoredApplication> => {
     const response = await apiClient.post<TailoredApplication>(`/jobs/${jobId}/tailor`, {
       profile_id: profileId ?? null,
@@ -371,6 +374,7 @@ export const tailorApi = {
       one_page: onePage ?? false,
       tone: tone || null,
       focus_areas: focusAreas && focusAreas.length > 0 ? focusAreas : null,
+      must_have_keywords: mustHaveKeywords && mustHaveKeywords.length > 0 ? mustHaveKeywords : null,
     }, { params: { preview: true } });
     return response.data;
   },
@@ -428,6 +432,7 @@ export const tailorApi = {
     tone?: string;
     focus_areas?: string[];
     one_page?: boolean;
+    must_have_keywords?: string[];
   }): Promise<TailoredApplication> => {
     const response = await apiClient.post<TailoredApplication>('/tailor/manual', payload);
     return response.data;

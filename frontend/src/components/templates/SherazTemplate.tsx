@@ -8,6 +8,15 @@ export function SherazTemplate({ data, photo: _photo }: TemplateProps) {
   const expertiseBullets: string[] = data.expertise_bullets || []
   const additionalSkills: string[] = data.additional_skills || []
   const toolsWorkflow: string[] = (data.tools_list || []).slice(0, 6)
+  // Tech Skills must not repeat anything already shown in Tools and Workflow (tool names
+  // are intentionally also placed in skills_list for ATS) — drop those from the skills line
+  // so nothing appears in both sections. Handles case/".js"/trailing-acronym duplicates.
+  const _normSk = (s: string) => (s || '').trim().toLowerCase().replace(/\.js$/, '')
+  const _toolKeys = new Set(toolsWorkflow.map(_normSk))
+  const techSkills: string[] = skills.filter((s) => {
+    const m = s.match(/\(([^)]+)\)\s*$/)
+    return !_toolKeys.has(_normSk(s)) && !(m && _toolKeys.has(_normSk(m[1])))
+  })
 
   const MP = 'Montserrat, Poppins, Arial, sans-serif'
   const IO = 'Inter, Open Sans, Arial, sans-serif'
@@ -120,13 +129,13 @@ export function SherazTemplate({ data, photo: _photo }: TemplateProps) {
               ))}
             </div>
           )}
-          {(skills.length > 0 || toolsWorkflow.length > 0) && (
+          {(techSkills.length > 0 || toolsWorkflow.length > 0) && (
             <div>
               <SectionHeader label="Core Technical Skills" />
-              {skills.length > 0 && (
+              {techSkills.length > 0 && (
                 <div style={{ marginBottom: 10 }}>
                   <span style={{ fontFamily: IO, fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>Tech Skills: </span>
-                  <span style={{ fontFamily: IO, fontSize: 13, fontWeight: 400, color: '#4a4a4a', lineHeight: 1.85 }}>{skills.join('  ·  ')}</span>
+                  <span style={{ fontFamily: IO, fontSize: 13, fontWeight: 400, color: '#4a4a4a', lineHeight: 1.85 }}>{techSkills.join('  ·  ')}</span>
                 </div>
               )}
               {toolsWorkflow.length > 0 && (
