@@ -930,6 +930,20 @@ def _parse_claude_json(raw: str) -> dict:
         raise
 
 
+def _anthropic_error_detail(exc) -> str:
+    """Pull the human-readable message out of an Anthropic SDK error, if present."""
+    try:
+        body = getattr(exc, "body", None)
+        if isinstance(body, dict):
+            msg = (body.get("error") or {}).get("message")
+            if msg:
+                return str(msg)
+    except Exception:
+        pass
+    msg = getattr(exc, "message", None)
+    return str(msg) if msg else str(exc)
+
+
 def _friendly_anthropic_error(exc: Exception) -> str:
     """Map a raw Anthropic SDK exception to a clear, user-facing message."""
     if isinstance(exc, anthropic.RateLimitError):
@@ -939,7 +953,9 @@ def _friendly_anthropic_error(exc: Exception) -> str:
     if isinstance(exc, anthropic.APIConnectionError):
         return "Could not reach the AI service. Check the connection and try again."
     if isinstance(exc, anthropic.APIStatusError):
-        return f"The AI service returned an error (HTTP {exc.status_code}). Please try again shortly."
+        # Surface the actual API reason (e.g. "prompt is too long", "credit balance too low")
+        # instead of a generic message, so the real cause is visible in the UI.
+        return f"The AI service returned an error (HTTP {exc.status_code}): {_anthropic_error_detail(exc)}"
     return f"AI request failed: {exc}"
 
 
@@ -1029,7 +1045,7 @@ def _first_n_sentences(text: str, n: int) -> str:
 def _recency_weighting_block(recent_roles: Optional[list], one_page: bool = False, jd_title: str = "", template_id: Optional[int] = None) -> str:
     """
     Build the recency-weighting directive: the 2 most recent roles get bullets
-    rewritten ~90% toward the JD (JD-max but truthful); ONLY the single most recent
+    rewritten ~80% toward the JD (JD-max but truthful); ONLY the single most recent
     role also gets a JD-aligned title and the "As a {role}, ..." first bullet
     (doing it on both read as repetitive). Older roles stay ~80% original.
     """
@@ -1048,7 +1064,7 @@ def _recency_weighting_block(recent_roles: Optional[list], one_page: bool = Fals
         "\n\n## Recency Weighting (IMPORTANT)"
         "\nThe candidate's experience is listed most recent first."
         f"\n\nTHE 2 MOST RECENT ROLES: rewrite the bullets of EACH of these two roles with the SAME strength"
-        " (do not make the second one weaker) so that roughly 90% of the content reflects THIS job"
+        " (do not make the second one weaker) so that roughly 80% of the content reflects THIS job"
         " description — lead with the JD's exact stack, tools, and keywords; reframe the candidate's genuine"
         " and transferable experience into the JD's vocabulary; cover as many JD requirements as the candidate"
         " plausibly supports. You may rewrite all of their bullets to align with the JD."
@@ -1146,7 +1162,7 @@ def _call_claude_resume(
                 " held ones with real hands-on detail; state the rest as plausibly as possible.)"
             )
 
-    # ── Recency weighting: recent 2 roles ~90% JD, JD-aligned title + first bullet ──
+    # ── Recency weighting: recent 2 roles ~80% JD, JD-aligned title + first bullet ──
     prompt += _recency_weighting_block(
         recent_roles, one_page=bool(one_page), jd_title=job.get("title", ""), template_id=template_id
     )
